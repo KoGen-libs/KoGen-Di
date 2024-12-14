@@ -13,11 +13,14 @@ internal class FileWriter(
     private val logger: KSPLogger,
     private val codeGenerator: CodeGenerator,
 ) {
+    private var packageName = ""
+
     fun createComponentList(components: List<KSClassDeclaration>) {
         if (components.isEmpty()) return
         logger.warn("Creating component list")
 
-        val generator = ComponentListGenerator(logger)
+        createPackageName(components.first())
+        val generator = ComponentListGenerator(logger, packageName)
         val content = generator.generateComponentList(components)
 
         val file: OutputStream =
@@ -29,13 +32,17 @@ internal class FileWriter(
     fun createComponentFactory(components: List<KSClassDeclaration>) {
         logger.warn("Creating component factory")
 
-        val generator = ComponentFactoryGenerator()
+        val generator = ComponentFactoryGenerator(packageName)
         val content = generator.generate()
 
         val file: OutputStream =
             createFile(components.toFileList(), "KoGenComponentFactory")
         file += content
         file.close()
+    }
+
+    private fun createPackageName(component: KSClassDeclaration) {
+        if (packageName.isBlank()) packageName = component.packageName.asString()
     }
 
     private fun createFile(
@@ -46,12 +53,10 @@ internal class FileWriter(
             false,
             *files.toList().toTypedArray(),
         ),
-        kspPackage(),
+        packageName,
         fileName
     )
 }
-
-internal fun kspPackage() = "kz.evko.kogen_di"
 
 internal operator fun OutputStream.plusAssign(text: String) {
     write(text.toByteArray())

@@ -1,11 +1,11 @@
 package kz.evko.kogen_di.contentGenerator
 
-import kz.evko.kogen_di.kspPackage
-
-class ComponentFactoryGenerator {
+class ComponentFactoryGenerator(
+    private val packageName: String,
+) {
     fun generate(): String {
         return buildString {
-            appendLine("package ${kspPackage()}\n")
+            appendLine("package $packageName\n")
             appendLine("object KoGenComponentFactory {")
             appendLine("\tval singletons: MutableMap<KoGenComponent, Any> = mutableMapOf()\n")
             appendLine("\tinline fun <reified T> inject(): T {")

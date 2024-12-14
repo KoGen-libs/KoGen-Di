@@ -4,16 +4,17 @@ import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSDeclaration
 import kz.evko.kogen_di.annotations.KoGenComponent
-import kz.evko.kogen_di.kspPackage
 
 class ComponentListGenerator(
     private val logger: KSPLogger,
+    private val packageName: String,
 ) {
     fun generateComponentList(components: List<KSClassDeclaration>): String {
         val componentItems: MutableMap<String, String> = mutableMapOf()
 
         return buildString {
-            appendLine("package ${kspPackage()}\n")
+            appendLine("package $packageName\n")
+            appendLine("import $packageName.KoGenComponentFactory.inject\n")
             appendLine("enum class KoGenComponent(")
             appendLine("\tval singleton: Boolean,")
             appendLine("\tvararg val componentType: String,")
@@ -22,15 +23,27 @@ class ComponentListGenerator(
             components.forEach {
                 componentItems[it.simpleName.asString()] = it.getName()
                 val isSingleton = findSingletonParam(it)
-                appendLine("\t${it.simpleName.asString()}($isSingleton, ${createNamesLine(it)}),")
+                appendLine("\t_${it.simpleName.asString()}($isSingleton, ${createNamesLine(it)}),")
             }
             appendLine(";")
 
             appendLine("\tfun getObject(): Any {")
             appendLine("\t\treturn when (this) {")
 
-            componentItems.forEach {
-                appendLine("\t\t\t${it.key} -> ${it.value}()")
+            components.forEach {
+                val values = it.primaryConstructor?.parameters.orEmpty()
+                val name = it.simpleName.asString()
+                componentItems[name]?.let { fullName ->
+                    if (values.isEmpty()) {
+                        appendLine("\t\t\t_$name -> $fullName()")
+                    } else {
+                        appendLine("\t\t\t_$name -> $fullName(")
+                        values.forEach { value ->
+                            appendLine("\t\t\t\t${value.name?.asString()} = inject(),")
+                        }
+                        appendLine("\t\t\t)")
+                    }
+                }
             }
 
             appendLine("\t\t}")
@@ -46,7 +59,10 @@ class ComponentListGenerator(
         val names = mutableListOf(component.getName())
 
         component.superTypes.forEach {
-            names.add(it.resolve().declaration.getName())
+            val name = it.resolve().declaration.getName()
+            if (name != "kotlin.Any") {
+                names.add(name)
+            }
         }
 
         return names.joinToString(", ") {

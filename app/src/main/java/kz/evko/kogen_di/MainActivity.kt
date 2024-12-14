@@ -4,16 +4,23 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import kz.evko.kogen_di.KoGenComponentFactory.inject
 import kz.evko.kogen_di.annotations.KoGenComponent
 import kz.evko.kogen_di.ui.theme.KoGenDITheme
+import java.util.UUID
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,11 +39,19 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(modifier: Modifier = Modifier, name: Masuika = inject()) {
-    Text(
-        text = "Hello ${name.sayHello()}!",
-        modifier = modifier
-    )
+fun Greeting(modifier: Modifier = Modifier, nameUseCase: NameUseCase = inject()) {
+    var name by remember { mutableStateOf(nameUseCase.getName()) }
+    Column(modifier = modifier) {
+        Text(
+            text = "Hello ${name}!",
+        )
+
+        Button(onClick = {
+            name = nameUseCase.getName()
+        }) {
+            Text(text = "Update Name")
+        }
+    }
 }
 
 @Preview(showBackground = true)
@@ -55,16 +70,29 @@ interface ApiSource {
 
 @KoGenComponent
 class ApiSourceImpl : ApiSource {
-    override fun getName(): String = "Weee"
+    override fun getName(): String = UUID.randomUUID().toString()
 }
 
-interface MasuikasName {
-    fun sayHello(): String
-}
+@KoGenComponent(singleton = false)
+class NameService(private val source: ApiSource) {
+    private var name: String? = null
 
-@KoGenComponent(singleton = true)
-class Masuika: MasuikasName {
-    override fun sayHello(): String {
-        return "Hello masuika"
+    fun getName(): String {
+        return if (name != null) {
+            name!!
+        } else {
+            name = source.getName()
+            name!!
+        }
     }
+
+}
+
+interface NameUseCase {
+    fun getName(): String
+}
+
+@KoGenComponent
+class NameUseCaseImpl(private val service: NameService) : NameUseCase {
+    override fun getName(): String = service.getName()
 }

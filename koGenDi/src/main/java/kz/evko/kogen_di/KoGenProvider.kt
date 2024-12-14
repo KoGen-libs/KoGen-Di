@@ -30,10 +30,6 @@ internal class KoGenProcessor(
 
         if (!componentClasses.iterator().hasNext()) return emptyList()
 
-        componentClasses.forEach {
-
-        }
-
         fileWriter.createComponentList(componentClasses.toList())
 
         fileWriter.createComponentFactory(emptyList())
