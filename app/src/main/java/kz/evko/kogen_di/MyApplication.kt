@@ -6,8 +6,11 @@ import kz.evko.kogen_di.annotations.KoGenBin
 
 class MyApplication : Application() {
 
-    fun provideContext(): Context = applicationContext
+    override fun onCreate() {
+        super.onCreate()
+        //setApplicationContext(applicationContext)
+    }
 }
 
 @KoGenBin
-fun baseUrl(): String = "https://api.example.com/"
+fun baseUrl(context: Context): String = "https://api.example.com/".plus(context.getString(R.string.app_name))

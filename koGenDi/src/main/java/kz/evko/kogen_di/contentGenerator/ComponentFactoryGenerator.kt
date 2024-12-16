@@ -6,11 +6,25 @@ class ComponentFactoryGenerator(
     fun generate(): String {
         return buildString {
             appendLine("package $packageName\n")
+            appendLine("import android.content.Context\n")
             appendLine("object KoGenComponentFactory {")
             appendLine("\tval singletons: MutableMap<KoGenComponents, Any> = mutableMapOf()\n")
+
+            appendLine("\tvar applicationContext: Context? = null")
+            appendLine("\t\tprivate set\n")
+
+            appendLine("\tfun setApplicationContext(context: Context) {")
+            appendLine("\t\tapplicationContext = context")
+            appendLine("\t}")
+
             appendLine("\tinline fun <reified T> inject(): T {")
             appendLine("\t\tval reference = T::class.java")
             appendLine("\t\tval componentName = \"\${reference.packageName}.\${reference.simpleName}\"\n")
+
+            appendLine("\t\tif (reference == Context::class.java) {")
+            appendLine("\t\t\tif (applicationContext == null) throw ComponentNotFoundException(\"Context\")")
+            appendLine("\t\t\treturn applicationContext as T")
+            appendLine("\t\t}\n")
 
             appendLine("\t\tKoGenBeans.entries.firstOrNull { it.type == reference }?.let {")
             appendLine("\t\t\treturn it.bean as T")

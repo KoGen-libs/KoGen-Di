@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kz.evko.kogen_di.KoGenComponentFactory.inject
+import kz.evko.kogen_di.KoGenComponentFactory.setApplicationContext
 import kz.evko.kogen_di.annotations.KoGenComponent
 import kz.evko.kogen_di.ui.theme.KoGenDITheme
 import java.util.UUID
@@ -29,6 +30,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        setApplicationContext(applicationContext)
         setContent {
             KoGenDITheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -71,6 +73,7 @@ interface ApiSource {
 @KoGenComponent
 class ApiSourceImpl(
     private val baseUrl: String,
+    private val context: Context,
 ) : ApiSource {
     override fun getName(): String = baseUrl//UUID.randomUUID().toString()
 }

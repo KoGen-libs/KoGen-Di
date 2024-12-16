@@ -11,13 +11,24 @@ class BeansListGenerator(
         return buildString {
             appendLine("package $packageName\n")
 
+            appendLine("import $packageName.KoGenComponentFactory.inject\n")
+
             appendLine("enum class KoGenBeans(val type: Class<*>, val bean: Any) {")
             beans.forEach {
                 it.returnType?.let { type ->
                     val returnType = type.resolve().declaration
-                    append("\t_${returnType.simpleName.asString()}(")
-                    append("${returnType.packageName.asString()}.${returnType.simpleName.asString()}::class.java, ")
-                    append("${it.packageName.asString()}.${it.simpleName.asString()}()),\n")
+                    appendLine("\t_${returnType.simpleName.asString()}(")
+                    appendLine("\t\ttype = ${returnType.packageName.asString()}.${returnType.simpleName.asString()}::class.java,")
+                    if (it.parameters.isEmpty()) {
+                        appendLine("\t\tbean = ${it.packageName.asString()}.${it.simpleName.asString()}()),")
+                    } else {
+                        appendLine("\t\tbean = ${it.packageName.asString()}.${it.simpleName.asString()}(")
+                        it.parameters.forEach { parameter ->
+                            appendLine("\t\t\t${parameter.name?.asString()} = inject(),")
+                        }
+                        appendLine("\t\t),")
+                    }
+                    appendLine("\t),")
                 }
             }
 
