@@ -15,7 +15,7 @@ class ComponentListGenerator(
         return buildString {
             appendLine("package $packageName\n")
             appendLine("import $packageName.KoGenComponentFactory.inject\n")
-            appendLine("enum class KoGenComponent(")
+            appendLine("enum class KoGenComponents(")
             appendLine("\tval singleton: Boolean,")
             appendLine("\tvararg val componentType: String,")
             appendLine(") {")
@@ -25,7 +25,7 @@ class ComponentListGenerator(
                 val isSingleton = findSingletonParam(it)
                 appendLine("\t_${it.simpleName.asString()}($isSingleton, ${createNamesLine(it)}),")
             }
-            appendLine(";")
+            appendLine("\t;")
 
             appendLine("\tfun getObject(): Any {")
             appendLine("\t\treturn when (this) {")

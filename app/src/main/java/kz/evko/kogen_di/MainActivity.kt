@@ -1,11 +1,13 @@
 package kz.evko.kogen_di
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
@@ -15,8 +17,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import kz.evko.kogen_di.KoGenComponentFactory.inject
 import kz.evko.kogen_di.annotations.KoGenComponent
 import kz.evko.kogen_di.ui.theme.KoGenDITheme
@@ -41,26 +44,23 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun Greeting(modifier: Modifier = Modifier, nameUseCase: NameUseCase = inject()) {
     var name by remember { mutableStateOf(nameUseCase.getName()) }
-    Column(modifier = modifier) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         Text(
             text = "Hello ${name}!",
         )
 
-        Button(onClick = {
-            name = nameUseCase.getName()
-        }) {
+        Button(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            onClick = {
+                name = nameUseCase.getName()
+            }) {
             Text(text = "Update Name")
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview(
-    source: ApiSource = inject()
-) {
-    KoGenDITheme {
-        Greeting()
     }
 }
 
@@ -69,23 +69,19 @@ interface ApiSource {
 }
 
 @KoGenComponent
-class ApiSourceImpl : ApiSource {
-    override fun getName(): String = UUID.randomUUID().toString()
+class ApiSourceImpl(
+    private val baseUrl: String,
+) : ApiSource {
+    override fun getName(): String = baseUrl//UUID.randomUUID().toString()
 }
 
-@KoGenComponent(singleton = false)
+@KoGenComponent(singleton = true)
 class NameService(private val source: ApiSource) {
     private var name: String? = null
 
     fun getName(): String {
-        return if (name != null) {
-            name!!
-        } else {
-            name = source.getName()
-            name!!
-        }
+        return source.getName()
     }
-
 }
 
 interface NameUseCase {

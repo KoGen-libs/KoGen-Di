@@ -4,7 +4,10 @@ import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.KSClassDeclaration
+import com.google.devtools.ksp.symbol.KSDeclaration
 import com.google.devtools.ksp.symbol.KSFile
+import com.google.devtools.ksp.symbol.KSFunctionDeclaration
+import kz.evko.kogen_di.contentGenerator.BeansListGenerator
 import kz.evko.kogen_di.contentGenerator.ComponentFactoryGenerator
 import kz.evko.kogen_di.contentGenerator.ComponentListGenerator
 import java.io.OutputStream
@@ -15,6 +18,20 @@ internal class FileWriter(
 ) {
     private var packageName = ""
 
+    fun createBeansList(beans: List<KSFunctionDeclaration>) {
+        if (beans.isEmpty()) return
+        logger.warn("Creating beans list")
+
+        createPackageName(beans.first())
+        val generator = BeansListGenerator(logger, packageName)
+        val content = generator.generateBeansList(beans)
+
+        val file: OutputStream =
+            createFile(beans.toFileList(), "KoGenBeans")
+        file += content
+        file.close()
+    }
+
     fun createComponentList(components: List<KSClassDeclaration>) {
         if (components.isEmpty()) return
         logger.warn("Creating component list")
@@ -24,7 +41,7 @@ internal class FileWriter(
         val content = generator.generateComponentList(components)
 
         val file: OutputStream =
-            createFile(components.toFileList(), "KoGenComponent")
+            createFile(components.toFileList(), "KoGenComponents")
         file += content
         file.close()
     }
@@ -41,7 +58,7 @@ internal class FileWriter(
         file.close()
     }
 
-    private fun createPackageName(component: KSClassDeclaration) {
+    private fun createPackageName(component: KSDeclaration) {
         if (packageName.isBlank()) packageName = component.packageName.asString()
     }
 
@@ -62,5 +79,5 @@ internal operator fun OutputStream.plusAssign(text: String) {
     write(text.toByteArray())
 }
 
-internal fun List<KSClassDeclaration>.toFileList(): List<KSFile> =
+internal fun List<KSDeclaration>.toFileList(): List<KSFile> =
     mapNotNull { it.containingFile }

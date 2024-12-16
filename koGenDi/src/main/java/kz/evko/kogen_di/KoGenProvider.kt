@@ -9,6 +9,7 @@ import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.validate
+import kz.evko.kogen_di.annotations.KoGenBin
 import kz.evko.kogen_di.annotations.KoGenComponent
 import kotlin.reflect.KClass
 
@@ -27,9 +28,13 @@ internal class KoGenProcessor(
         val componentClasses: Sequence<KSClassDeclaration> =
             resolver.findAnnotations(KoGenComponent::class)
                 .filterIsInstance<KSClassDeclaration>()
+        val beanFunctions: Sequence<KSFunctionDeclaration> =
+            resolver.findAnnotations(KoGenBin::class)
+                .filterIsInstance<KSFunctionDeclaration>()
 
         if (!componentClasses.iterator().hasNext()) return emptyList()
 
+        fileWriter.createBeansList(beanFunctions.toList())
         fileWriter.createComponentList(componentClasses.toList())
 
         fileWriter.createComponentFactory(emptyList())
