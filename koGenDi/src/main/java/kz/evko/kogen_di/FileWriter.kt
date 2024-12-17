@@ -19,7 +19,6 @@ internal class FileWriter(
     private var packageName = ""
 
     fun createBeansList(beans: List<KSFunctionDeclaration>) {
-        if (beans.isEmpty()) return
         logger.warn("Creating beans list")
 
         createPackageName(beans.first())

@@ -13,4 +13,5 @@ class MyApplication : Application() {
 }
 
 @KoGenBin
-fun baseUrl(context: Context): String = "https://api.example.com/".plus(context.getString(R.string.app_name))
+fun baseUrl(context: Context): String = "https://api.example.com/"
+    .plus(context.getString(R.string.app_name))

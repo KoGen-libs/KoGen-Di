@@ -13,14 +13,13 @@ class BeansListGenerator(
 
             appendLine("import $packageName.KoGenComponentFactory.inject\n")
 
-            appendLine("enum class KoGenBeans(val type: Class<*>, val bean: Any) {")
+            appendLine("enum class KoGenBeans(val bean: Any) {")
             beans.forEach {
                 it.returnType?.let { type ->
                     val returnType = type.resolve().declaration
                     appendLine("\t_${returnType.simpleName.asString()}(")
-                    appendLine("\t\ttype = ${returnType.packageName.asString()}.${returnType.simpleName.asString()}::class.java,")
                     if (it.parameters.isEmpty()) {
-                        appendLine("\t\tbean = ${it.packageName.asString()}.${it.simpleName.asString()}()),")
+                        appendLine("\t\tbean = ${it.packageName.asString()}.${it.simpleName.asString()}(),")
                     } else {
                         appendLine("\t\tbean = ${it.packageName.asString()}.${it.simpleName.asString()}(")
                         it.parameters.forEach { parameter ->
@@ -32,6 +31,19 @@ class BeansListGenerator(
                 }
             }
 
+            appendLine("}\n")
+
+            appendLine("fun findBeanByType(type: Class<*>): KoGenBeans? {")
+            appendLine("\treturn when (type) {")
+            beans.forEach {
+                it.returnType?.let { type ->
+                    val returnType = type.resolve().declaration
+                    appendLine("\t\t${returnType.packageName.asString()}.${returnType.simpleName.asString()}::class.java -> KoGenBeans._${returnType.simpleName.asString()}")
+                }
+            }
+            appendLine("\t\telse -> null")
+
+            appendLine("\t}")
             appendLine("}")
         }
     }

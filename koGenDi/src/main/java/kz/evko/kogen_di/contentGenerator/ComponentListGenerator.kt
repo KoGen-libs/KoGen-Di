@@ -27,7 +27,7 @@ class ComponentListGenerator(
             }
             appendLine("\t;")
 
-            appendLine("\tfun getObject(): Any {")
+            appendLine("\tfun getComponentObject(): Any {")
             appendLine("\t\treturn when (this) {")
 
             components.forEach {

@@ -73,7 +73,6 @@ interface ApiSource {
 @KoGenComponent
 class ApiSourceImpl(
     private val baseUrl: String,
-    private val context: Context,
 ) : ApiSource {
     override fun getName(): String = baseUrl//UUID.randomUUID().toString()
 }
