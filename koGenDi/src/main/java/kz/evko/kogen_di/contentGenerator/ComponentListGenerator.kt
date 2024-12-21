@@ -4,6 +4,7 @@ import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSDeclaration
 import kz.evko.kogen_di.annotations.KoGenComponent
+import kotlin.reflect.KClass
 
 class ComponentListGenerator(
     private val logger: KSPLogger,
@@ -14,7 +15,7 @@ class ComponentListGenerator(
 
         return buildString {
             appendLine("package $packageName\n")
-            appendLine("import $packageName.KoGenComponentFactory.inject\n")
+            appendLine("import $packageName.KoGenInjectFactory.inject\n")
             appendLine("enum class KoGenComponents(")
             appendLine("\tval singleton: Boolean,")
             appendLine("\tvararg val componentType: String,")
@@ -22,7 +23,7 @@ class ComponentListGenerator(
 
             components.forEach {
                 componentItems[it.simpleName.asString()] = it.getName()
-                val isSingleton = findSingletonParam(it)
+                val isSingleton = it.findSingletonParam(KoGenComponent::class)
                 appendLine("\t_${it.simpleName.asString()}($isSingleton, ${createNamesLine(it)}),")
             }
             appendLine("\t;")
@@ -55,6 +56,37 @@ class ComponentListGenerator(
         }
     }
 
+    fun createComponentFactory(): String {
+        return buildString {
+            appendLine("package $packageName\n")
+
+            appendLine("class KoGenComponentsFactory {")
+            appendLine("\tprivate val singleComponents: MutableMap<KoGenComponents, Any> = mutableMapOf()\n")
+            appendLine("\tprivate fun findComponentByName(name: String): KoGenComponents? {")
+            appendLine("\t\treturn KoGenComponents.entries.firstOrNull {")
+            appendLine("\t\t\tit.componentType.contains(name)")
+            appendLine("\t\t}")
+            appendLine("\t}\n")
+
+            appendLine("\tfun getComponent(name: String): Any? {")
+            appendLine("\t\treturn findComponentByName(name)?.let {")
+            appendLine("\t\t\tif (it.singleton) {")
+            appendLine("\t\t\t\tsingleComponents[it]?.let {")
+            appendLine("\t\t\t\t\tit")
+            appendLine("\t\t\t\t} ?: run {")
+            appendLine("\t\t\t\t\tval newComponent = it.getComponentObject()")
+            appendLine("\t\t\t\t\tsingleComponents[it] = newComponent")
+            appendLine("\t\t\t\t\tnewComponent")
+            appendLine("\t\t\t\t}")
+            appendLine("\t\t\t} else {")
+            appendLine("\t\t\t\tit.getComponentObject()")
+            appendLine("\t\t\t}")
+            appendLine("\t\t}")
+            appendLine("\t}")
+            appendLine("}")
+        }
+    }
+
     private fun createNamesLine(component: KSClassDeclaration): String {
         val names = mutableListOf(component.getName())
 
@@ -69,13 +101,13 @@ class ComponentListGenerator(
             "\"$it\""
         }
     }
+}
 
-    private fun findSingletonParam(component: KSClassDeclaration): Boolean {
-        val annotation =
-            component.annotations.first { it.shortName.asString() == KoGenComponent::class.simpleName.toString() }
-        val name = annotation.arguments.first { it.name?.asString() == "singleton" }
-        return name.value == true
-    }
+internal fun KSDeclaration.findSingletonParam(annotationClass: KClass<*>): Boolean {
+    val annotation =
+        this.annotations.firstOrNull { it.shortName.asString() == annotationClass::class.simpleName.toString() }
+    val name = annotation?.arguments?.firstOrNull { it.name?.asString() == "singleton" }
+    return name?.value == true
 }
 
 internal fun KSDeclaration.getName(): String =

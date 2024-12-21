@@ -1,7 +1,6 @@
 package kz.evko.kogen_di.contentGenerator
 
 import com.google.devtools.ksp.processing.KSPLogger
-import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import kz.evko.kogen_di.annotations.KoGenBean
 
@@ -13,13 +12,16 @@ class BeansListGenerator(
         return buildString {
             appendLine("package $packageName\n")
 
-            appendLine("import $packageName.KoGenComponentFactory.inject\n")
+            appendLine("import $packageName.KoGenInjectFactory.inject\n")
 
             appendLine("enum class KoGenBeans(val singleton: Boolean) {")
             beans.forEach {
                 it.returnType?.let { type ->
                     val returnType = type.resolve().declaration
-                    appendLine("\t_${returnType.simpleName.asString()}(singleton = ${findSingletonParam(it)}),")
+                    val isSingleton = it.findSingletonParam(KoGenBean::class)
+                    appendLine(
+                        "\t_${returnType.simpleName.asString()}(singleton = $isSingleton),"
+                    )
                 }
             }
             appendLine("\t;\n")
@@ -47,6 +49,12 @@ class BeansListGenerator(
             appendLine("\t}")
 
             appendLine("}\n")
+        }
+    }
+
+    fun generateBeansFactory(beans: List<KSFunctionDeclaration>): String {
+        return buildString {
+            appendLine("package $packageName\n")
 
             appendLine("class KoGenBeansFactory {")
             appendLine("\tprivate val singleBeans: MutableMap<KoGenBeans, Any> = mutableMapOf()")
@@ -82,33 +90,6 @@ class BeansListGenerator(
             }
             appendLine("\t)")
             appendLine("}\n")
-/*
-
-            appendLine("@Deprecated(\"Old implementation\")")
-            appendLine("fun findBeanByType(type: Class<*>): KoGenBeans? {")
-            appendLine("\tval bean = when (type) {")
-            beans.forEach {
-                it.returnType?.let { type ->
-                    val returnType = type.resolve().declaration
-                    appendLine("\t\t${returnType.packageName.asString()}.${returnType.simpleName.asString()}::class.java -> {")
-                    appendLine("\t\tprintln(\"Type: \${type.packageName}.\${type.simpleName} is _${returnType.simpleName.asString()}\")")
-                    appendLine("\t\t\tKoGenBeans._${returnType.simpleName.asString()}")
-                    appendLine("\t\t}")
-                }
-            }
-            appendLine("\t\telse -> null")
-
-            appendLine("\t}")
-
-            appendLine("\n\treturn bean")
-            appendLine("}")*/
         }
-    }
-
-    private fun findSingletonParam(component: KSFunctionDeclaration): Boolean {
-        val annotation =
-            component.annotations.first { it.shortName.asString() == KoGenBean::class.simpleName.toString() }
-        val name = annotation.arguments.first { it.name?.asString() == "singleton" }
-        return name.value == true
     }
 }

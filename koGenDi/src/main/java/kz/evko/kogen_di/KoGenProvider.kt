@@ -39,8 +39,6 @@ internal class KoGenProcessor(
         fileWriter.createBeansList(beanFunctions.toList())
         fileWriter.createComponentList(componentClasses.toList())
 
-        fileWriter.createComponentFactory(emptyList())
-
         val result: MutableList<KSAnnotated> = mutableListOf()
         result.addAll(componentClasses.filterNot { it.validate() }.toList())
         result.addAll(beanFunctions.filterNot { it.validate() }.toList())
