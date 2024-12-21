@@ -2,4 +2,6 @@ package kz.evko.kogen_di.annotations
 
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.SOURCE)
-annotation class KoGenBin
+annotation class KoGenBean(
+    val singleton: Boolean = false,
+)

@@ -1,7 +1,9 @@
 package kz.evko.kogen_di.contentGenerator
 
 import com.google.devtools.ksp.processing.KSPLogger
+import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
+import kz.evko.kogen_di.annotations.KoGenBean
 
 class BeansListGenerator(
     private val logger: KSPLogger,
@@ -13,38 +15,100 @@ class BeansListGenerator(
 
             appendLine("import $packageName.KoGenComponentFactory.inject\n")
 
-            appendLine("enum class KoGenBeans(val bean: Any) {")
+            appendLine("enum class KoGenBeans(val singleton: Boolean) {")
             beans.forEach {
                 it.returnType?.let { type ->
                     val returnType = type.resolve().declaration
-                    appendLine("\t_${returnType.simpleName.asString()}(")
+                    appendLine("\t_${returnType.simpleName.asString()}(singleton = ${findSingletonParam(it)}),")
+                }
+            }
+            appendLine("\t;\n")
+
+            appendLine("\tfun getComponentObject(): Any {")
+            appendLine("\t\treturn when (this) {")
+            beans.forEach {
+                it.returnType?.let { type ->
+                    val returnType = type.resolve().declaration
+                    appendLine("\t\t\t_${returnType.simpleName.asString()} -> {")
                     if (it.parameters.isEmpty()) {
-                        appendLine("\t\tbean = ${it.packageName.asString()}.${it.simpleName.asString()}(),")
+                        appendLine("\t\t\t\t${it.packageName.asString()}.${it.simpleName.asString()}()")
                     } else {
-                        appendLine("\t\tbean = ${it.packageName.asString()}.${it.simpleName.asString()}(")
+                        appendLine("\t\t\t\t${it.packageName.asString()}.${it.simpleName.asString()}(")
                         it.parameters.forEach { parameter ->
-                            appendLine("\t\t\t${parameter.name?.asString()} = inject(),")
+                            appendLine("\t\t\t\t\t${parameter.name?.asString()} = inject(),")
                         }
-                        appendLine("\t\t),")
+                        appendLine("\t\t\t\t)")
                     }
-                    appendLine("\t),")
+                    appendLine("\t\t\t}")
                 }
             }
 
+            appendLine("\t\t}")
+            appendLine("\t}")
+
             appendLine("}\n")
 
-            appendLine("fun findBeanByType(type: Class<*>): KoGenBeans? {")
-            appendLine("\treturn when (type) {")
+            appendLine("class KoGenBeansFactory {")
+            appendLine("\tprivate val singleBeans: MutableMap<KoGenBeans, Any> = mutableMapOf()")
+            appendLine("\tprivate var beansList: Map<Class<*>, KoGenBeans> = mapOf()\n")
+
+            appendLine("\tfun findBeanByType(type: Class<*>): KoGenBeans? {")
+            appendLine("\t\tif (beansList.isEmpty()) {")
+            appendLine("\t\t\tbeansList = createBeansList()")
+            appendLine("\t\t}")
+            appendLine("\t\treturn beansList[type]")
+            appendLine("\t}\n")
+
+            appendLine("\tfun getBean(bean: KoGenBeans): Any {")
+            appendLine("\t\treturn if (bean.singleton) {")
+            appendLine("\t\t\tsingleBeans[bean]?.let {")
+            appendLine("\t\t\t\tit")
+            appendLine("\t\t\t} ?: run {")
+            appendLine("\t\t\t\tval newBean = bean.getComponentObject()")
+            appendLine("\t\t\t\tsingleBeans[bean] = newBean")
+            appendLine("\t\t\t\tnewBean")
+            appendLine("\t\t\t}")
+            appendLine("\t\t} else {")
+            appendLine("\t\t\tbean.getComponentObject()")
+            appendLine("\t\t}")
+            appendLine("\t}\n")
+
+            appendLine("\tprivate fun createBeansList(): Map<Class<*>, KoGenBeans> = mapOf(")
             beans.forEach {
                 it.returnType?.let { type ->
                     val returnType = type.resolve().declaration
-                    appendLine("\t\t${returnType.packageName.asString()}.${returnType.simpleName.asString()}::class.java -> KoGenBeans._${returnType.simpleName.asString()}")
+                    appendLine("\t\t${returnType.packageName.asString()}.${returnType.simpleName.asString()}::class.java to KoGenBeans._${returnType.simpleName.asString()},")
+                }
+            }
+            appendLine("\t)")
+            appendLine("}\n")
+/*
+
+            appendLine("@Deprecated(\"Old implementation\")")
+            appendLine("fun findBeanByType(type: Class<*>): KoGenBeans? {")
+            appendLine("\tval bean = when (type) {")
+            beans.forEach {
+                it.returnType?.let { type ->
+                    val returnType = type.resolve().declaration
+                    appendLine("\t\t${returnType.packageName.asString()}.${returnType.simpleName.asString()}::class.java -> {")
+                    appendLine("\t\tprintln(\"Type: \${type.packageName}.\${type.simpleName} is _${returnType.simpleName.asString()}\")")
+                    appendLine("\t\t\tKoGenBeans._${returnType.simpleName.asString()}")
+                    appendLine("\t\t}")
                 }
             }
             appendLine("\t\telse -> null")
 
             appendLine("\t}")
-            appendLine("}")
+
+            appendLine("\n\treturn bean")
+            appendLine("}")*/
         }
+    }
+
+    private fun findSingletonParam(component: KSFunctionDeclaration): Boolean {
+        val annotation =
+            component.annotations.first { it.shortName.asString() == KoGenBean::class.simpleName.toString() }
+        val name = annotation.arguments.first { it.name?.asString() == "singleton" }
+        return name.value == true
     }
 }

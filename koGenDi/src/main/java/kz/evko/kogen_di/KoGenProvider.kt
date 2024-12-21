@@ -9,7 +9,7 @@ import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.validate
-import kz.evko.kogen_di.annotations.KoGenBin
+import kz.evko.kogen_di.annotations.KoGenBean
 import kz.evko.kogen_di.annotations.KoGenComponent
 import kotlin.reflect.KClass
 
@@ -29,16 +29,22 @@ internal class KoGenProcessor(
             resolver.findAnnotations(KoGenComponent::class)
                 .filterIsInstance<KSClassDeclaration>()
         val beanFunctions: Sequence<KSFunctionDeclaration> =
-            resolver.findAnnotations(KoGenBin::class)
+            resolver.findAnnotations(KoGenBean::class)
                 .filterIsInstance<KSFunctionDeclaration>()
 
-        if (!componentClasses.iterator().hasNext()) return emptyList()
+        if (!componentClasses.iterator().hasNext() &&
+            !beanFunctions.iterator().hasNext()
+        ) return emptyList()
 
         fileWriter.createBeansList(beanFunctions.toList())
         fileWriter.createComponentList(componentClasses.toList())
 
         fileWriter.createComponentFactory(emptyList())
-        return (componentClasses).filterNot { it.validate() }.toList()
+
+        val result: MutableList<KSAnnotated> = mutableListOf()
+        result.addAll(componentClasses.filterNot { it.validate() }.toList())
+        result.addAll(beanFunctions.filterNot { it.validate() }.toList())
+        return result
     }
 }
 

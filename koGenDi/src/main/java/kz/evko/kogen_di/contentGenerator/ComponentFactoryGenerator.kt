@@ -8,6 +8,7 @@ class ComponentFactoryGenerator(
             appendLine("package $packageName\n")
             appendLine("import android.content.Context\n")
             appendLine("object KoGenComponentFactory {")
+            appendLine("\tval beansFactory: KoGenBeansFactory = KoGenBeansFactory()")
             appendLine("\tval singletons: MutableMap<KoGenComponents, Any> = mutableMapOf()\n")
 
             appendLine("\tvar applicationContext: Context? = null")
@@ -26,8 +27,14 @@ class ComponentFactoryGenerator(
             appendLine("\t\t\treturn applicationContext as T")
             appendLine("\t\t}\n")
 
-            appendLine("\t\tfindBeanByType(reference)?.let {")
-            appendLine("\t\t\treturn it.bean as T")
+            //appendLine("\t\tval bean = findBeanByType(reference)")
+            appendLine("\t\tval bean = beansFactory.findBeanByType(reference)")
+            appendLine("\t\tprintln(\"Bean: \$bean\")")
+            appendLine("\t\tbean?.let {")
+           // appendLine("\t\tfindBeanByType(reference)?.let {")
+            appendLine("\t\t\tprintln(\"Type: \$componentName is found as bean \${it.name}\")")
+            //appendLine("\t\t\treturn it.bean as T")
+            appendLine("\t\t\treturn beansFactory.getBean(it) as T")
             appendLine("\t\t}\n")
 
             appendLine("\t\tKoGenComponents.entries.firstOrNull { it.componentType.contains(componentName) }?.let {")
