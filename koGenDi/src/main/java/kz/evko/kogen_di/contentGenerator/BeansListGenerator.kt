@@ -27,27 +27,29 @@ class BeansListGenerator(
             appendLine("\t;\n")
 
             appendLine("\tfun getComponentObject(): Any {")
-            appendLine("\t\treturn when (this) {")
-            beans.forEach {
-                it.returnType?.let { type ->
-                    val returnType = type.resolve().declaration
-                    appendLine("\t\t\t_${returnType.simpleName.asString()} -> {")
-                    if (it.parameters.isEmpty()) {
-                        appendLine("\t\t\t\t${it.packageName.asString()}.${it.simpleName.asString()}()")
-                    } else {
-                        appendLine("\t\t\t\t${it.packageName.asString()}.${it.simpleName.asString()}(")
-                        it.parameters.forEach { parameter ->
-                            appendLine("\t\t\t\t\t${parameter.name?.asString()} = inject(),")
+            if (beans.isEmpty()) appendLine("\t\treturn Any()")
+            else {
+                appendLine("\t\treturn when (this) {")
+                beans.forEach {
+                    it.returnType?.let { type ->
+                        val returnType = type.resolve().declaration
+                        appendLine("\t\t\t_${returnType.simpleName.asString()} -> {")
+                        if (it.parameters.isEmpty()) {
+                            appendLine("\t\t\t\t${it.packageName.asString()}.${it.simpleName.asString()}()")
+                        } else {
+                            appendLine("\t\t\t\t${it.packageName.asString()}.${it.simpleName.asString()}(")
+                            it.parameters.forEach { parameter ->
+                                appendLine("\t\t\t\t\t${parameter.name?.asString()} = inject(),")
+                            }
+                            appendLine("\t\t\t\t)")
                         }
-                        appendLine("\t\t\t\t)")
+                        appendLine("\t\t\t}")
                     }
-                    appendLine("\t\t\t}")
                 }
+                appendLine("\t\t}")
             }
 
-            appendLine("\t\t}")
             appendLine("\t}")
-
             appendLine("}\n")
         }
     }

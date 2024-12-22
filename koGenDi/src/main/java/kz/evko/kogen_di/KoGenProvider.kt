@@ -7,6 +7,7 @@ import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.processing.SymbolProcessorProvider
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
+import com.google.devtools.ksp.symbol.KSDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.validate
 import kz.evko.kogen_di.annotations.KoGenBean
@@ -35,6 +36,13 @@ internal class KoGenProcessor(
         if (!componentClasses.iterator().hasNext() &&
             !beanFunctions.iterator().hasNext()
         ) return emptyList()
+
+        fileWriter.setPackageName(
+            listOf(
+                *componentClasses.toList().toTypedArray(),
+                *beanFunctions.toList().toTypedArray()
+            )
+        )
 
         fileWriter.createBeansList(beanFunctions.toList())
         fileWriter.createComponentList(componentClasses.toList())

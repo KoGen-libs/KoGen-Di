@@ -6,7 +6,10 @@ class InjectFactoryGenerator(
     fun generateBeansList(): String {
         return buildString {
             appendLine("package $packageName\n")
-            appendLine("import android.content.Context\n")
+            appendLine("import android.content.Context")
+            appendLine("import kz.evko.kogen_di.exceptions.ComponentNotFoundException")
+            appendLine("import kz.evko.kogen_di.exceptions.ContextNotFoundException\n")
+
             appendLine("object KoGenInjectFactory {")
             appendLine("\tval beansFactory: KoGenBeansFactory = KoGenBeansFactory()")
             appendLine("\tval componentsFactory: KoGenComponentsFactory = KoGenComponentsFactory()\n")
@@ -22,7 +25,7 @@ class InjectFactoryGenerator(
             appendLine("\t\tval reference = T::class.java\n")
 
             appendLine("\t\tif (reference == Context::class.java) {")
-            appendLine("\t\t\tif (applicationContext == null) throw ComponentNotFoundException(\"Context\")")
+            appendLine("\t\t\tif (applicationContext == null) throw ContextNotFoundException()")
             appendLine("\t\t\treturn applicationContext as T")
             appendLine("\t\t}\n")
 
@@ -38,9 +41,6 @@ class InjectFactoryGenerator(
             appendLine("\t}")
 
             appendLine("}\n")
-
-            appendLine("class ComponentNotFoundException(component: String) :")
-            appendLine("\tException(\"Component \$component not found\")")
         }
     }
 }

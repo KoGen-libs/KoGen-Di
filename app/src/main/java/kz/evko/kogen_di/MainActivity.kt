@@ -1,6 +1,5 @@
 package kz.evko.kogen_di
 
-import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -23,8 +22,8 @@ import androidx.compose.ui.unit.dp
 import kz.evko.kogen_di.KoGenInjectFactory.inject
 import kz.evko.kogen_di.KoGenInjectFactory.setApplicationContext
 import kz.evko.kogen_di.annotations.KoGenComponent
+import kz.evko.kogen_di.test.NameUseCase
 import kz.evko.kogen_di.ui.theme.KoGenDITheme
-import java.util.UUID
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -84,13 +83,4 @@ class NameService(private val source: ApiSource) {
     fun getName(): String {
         return source.getName()
     }
-}
-
-interface NameUseCase {
-    fun getName(): String
-}
-
-@KoGenComponent
-class NameUseCaseImpl(private val service: NameService) : NameUseCase {
-    override fun getName(): String = service.getName()
 }

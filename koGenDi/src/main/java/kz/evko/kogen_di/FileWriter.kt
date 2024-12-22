@@ -8,8 +8,8 @@ import com.google.devtools.ksp.symbol.KSDeclaration
 import com.google.devtools.ksp.symbol.KSFile
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import kz.evko.kogen_di.contentGenerator.BeansListGenerator
-import kz.evko.kogen_di.contentGenerator.InjectFactoryGenerator
 import kz.evko.kogen_di.contentGenerator.ComponentListGenerator
+import kz.evko.kogen_di.contentGenerator.InjectFactoryGenerator
 import java.io.OutputStream
 
 internal class FileWriter(
@@ -18,10 +18,14 @@ internal class FileWriter(
 ) {
     private var packageName = ""
 
+    fun setPackageName(components: List<KSDeclaration>) {
+        if (components.isNotEmpty()) packageName = components.first().packageName.asString()
+    }
+
     fun createBeansList(beans: List<KSFunctionDeclaration>) {
         logger.warn("Creating beans list")
+        logger.warn("Beans count: ${beans.size}")
 
-        if (beans.isNotEmpty()) createPackageName(beans.first())
         val generator = BeansListGenerator(logger, packageName)
         val listContent = generator.generateBeansList(beans)
 
@@ -39,8 +43,8 @@ internal class FileWriter(
 
     fun createComponentList(components: List<KSClassDeclaration>) {
         logger.warn("Creating component list")
+        logger.warn("Components count: ${components.size}")
 
-        if (components.isNotEmpty()) createPackageName(components.first())
         val generator = ComponentListGenerator(logger, packageName)
         val content = generator.generateComponentList(components)
 
@@ -68,10 +72,6 @@ internal class FileWriter(
             createFile(components.toFileList(), "KoGenInjectFactory")
         file += content
         file.close()
-    }
-
-    private fun createPackageName(component: KSDeclaration) {
-        if (packageName.isBlank()) packageName = component.packageName.asString()
     }
 
     private fun createFile(
