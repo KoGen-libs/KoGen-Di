@@ -15,11 +15,11 @@ class ComponentListGenerator(
 
         return buildString {
             appendLine("package $packageName\n")
-            appendLine("import $packageName.KoGenInjectFactory.inject\n")
-            appendLine("enum class KoGenComponents(")
-            appendLine("\tval singleton: Boolean,")
-            appendLine("\tvararg val componentType: String,")
-            appendLine(") {")
+
+            appendLine("enum class KoGenComponentsImpl(")
+            appendLine("\toverride val singleton: Boolean,")
+            appendLine("\toverride vararg val componentType: String,")
+            appendLine("): kz.evko.kogen_di.injector.KoGenComponents {")
 
             components.forEach {
                 componentItems[it.simpleName.asString()] = it.getName()
@@ -28,7 +28,7 @@ class ComponentListGenerator(
             }
             appendLine("\t;")
 
-            appendLine("\tfun getComponentObject(): Any {")
+            appendLine("\toverride fun getComponentObject(): Any {")
             appendLine("\t\treturn when (this) {")
 
             components.forEach {
@@ -42,7 +42,7 @@ class ComponentListGenerator(
                         values.forEach { value ->
                             appendLine("\t\t\t\t${value.name?.asString()} = inject(),")
                         }
-                        appendLine("\t\t\t)")
+                        appendLine("\t\t\t)\n")
                     }
                 }
             }
@@ -51,8 +51,6 @@ class ComponentListGenerator(
             appendLine("\t}")
 
             appendLine("}")
-
-
         }
     }
 
@@ -60,29 +58,10 @@ class ComponentListGenerator(
         return buildString {
             appendLine("package $packageName\n")
 
-            appendLine("class KoGenComponentsFactory {")
-            appendLine("\tprivate val singleComponents: MutableMap<KoGenComponents, Any> = mutableMapOf()\n")
-            appendLine("\tprivate fun findComponentByName(name: String): KoGenComponents? {")
-            appendLine("\t\treturn KoGenComponents.entries.firstOrNull {")
-            appendLine("\t\t\tit.componentType.contains(name)")
-            appendLine("\t\t}")
-            appendLine("\t}\n")
+            appendLine("class KoGenComponentsFactoryImpl : kz.evko.kogen_di.injector.KoGenComponentsFactory() {")
 
-            appendLine("\tfun getComponent(name: String): Any? {")
-            appendLine("\t\treturn findComponentByName(name)?.let {")
-            appendLine("\t\t\tif (it.singleton) {")
-            appendLine("\t\t\t\tsingleComponents[it]?.let {")
-            appendLine("\t\t\t\t\tit")
-            appendLine("\t\t\t\t} ?: run {")
-            appendLine("\t\t\t\t\tval newComponent = it.getComponentObject()")
-            appendLine("\t\t\t\t\tsingleComponents[it] = newComponent")
-            appendLine("\t\t\t\t\tnewComponent")
-            appendLine("\t\t\t\t}")
-            appendLine("\t\t\t} else {")
-            appendLine("\t\t\t\tit.getComponentObject()")
-            appendLine("\t\t\t}")
-            appendLine("\t\t}")
-            appendLine("\t}")
+            appendLine("\toverride fun componentsList(): List<kz.evko.kogen_di.injector.KoGenComponents> =")
+            appendLine("\t\tKoGenComponentsImpl.entries")
             appendLine("}")
         }
     }

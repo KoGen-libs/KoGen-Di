@@ -12,9 +12,7 @@ class BeansListGenerator(
         return buildString {
             appendLine("package $packageName\n")
 
-            appendLine("import $packageName.KoGenInjectFactory.inject\n")
-
-            appendLine("enum class KoGenBeans(val singleton: Boolean) {")
+            appendLine("enum class KoGenBeansImpl(override val singleton: Boolean): kz.evko.kogen_di.injector.KoGenBeans {")
             beans.forEach {
                 it.returnType?.let { type ->
                     val returnType = type.resolve().declaration
@@ -26,7 +24,7 @@ class BeansListGenerator(
             }
             appendLine("\t;\n")
 
-            appendLine("\tfun getComponentObject(): Any {")
+            appendLine("\toverride fun getComponentObject(): Any {")
             if (beans.isEmpty()) appendLine("\t\treturn Any()")
             else {
                 appendLine("\t\treturn when (this) {")
@@ -43,7 +41,7 @@ class BeansListGenerator(
                             }
                             appendLine("\t\t\t\t)")
                         }
-                        appendLine("\t\t\t}")
+                        appendLine("\t\t\t}\n")
                     }
                 }
                 appendLine("\t\t}")
@@ -58,36 +56,13 @@ class BeansListGenerator(
         return buildString {
             appendLine("package $packageName\n")
 
-            appendLine("class KoGenBeansFactory {")
-            appendLine("\tprivate val singleBeans: MutableMap<KoGenBeans, Any> = mutableMapOf()")
-            appendLine("\tprivate var beansList: Map<Class<*>, KoGenBeans> = mapOf()\n")
+            appendLine("class KoGenBeansFactoryImpl : kz.evko.kogen_di.injector.KoGenBeansFactory() {")
 
-            appendLine("\tfun findBeanByType(type: Class<*>): KoGenBeans? {")
-            appendLine("\t\tif (beansList.isEmpty()) {")
-            appendLine("\t\t\tbeansList = createBeansList()")
-            appendLine("\t\t}")
-            appendLine("\t\treturn beansList[type]")
-            appendLine("\t}\n")
-
-            appendLine("\tfun getBean(bean: KoGenBeans): Any {")
-            appendLine("\t\treturn if (bean.singleton) {")
-            appendLine("\t\t\tsingleBeans[bean]?.let {")
-            appendLine("\t\t\t\tit")
-            appendLine("\t\t\t} ?: run {")
-            appendLine("\t\t\t\tval newBean = bean.getComponentObject()")
-            appendLine("\t\t\t\tsingleBeans[bean] = newBean")
-            appendLine("\t\t\t\tnewBean")
-            appendLine("\t\t\t}")
-            appendLine("\t\t} else {")
-            appendLine("\t\t\tbean.getComponentObject()")
-            appendLine("\t\t}")
-            appendLine("\t}\n")
-
-            appendLine("\tprivate fun createBeansList(): Map<Class<*>, KoGenBeans> = mapOf(")
+            appendLine("\toverride fun createBeansList(): Map<Class<*>, kz.evko.kogen_di.injector.KoGenBeans> = mapOf(")
             beans.forEach {
                 it.returnType?.let { type ->
                     val returnType = type.resolve().declaration
-                    appendLine("\t\t${returnType.packageName.asString()}.${returnType.simpleName.asString()}::class.java to KoGenBeans._${returnType.simpleName.asString()},")
+                    appendLine("\t\t${returnType.packageName.asString()}.${returnType.simpleName.asString()}::class.java to KoGenBeansImpl._${returnType.simpleName.asString()},")
                 }
             }
             appendLine("\t)")
