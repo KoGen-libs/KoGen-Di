@@ -7,11 +7,11 @@ import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.processing.SymbolProcessorProvider
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
-import com.google.devtools.ksp.symbol.KSDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.validate
 import kz.evko.kogen_di.annotations.KoGenBean
 import kz.evko.kogen_di.annotations.KoGenComponent
+import kz.evko.kogen_di.annotations.KoGenViewModel
 import kotlin.reflect.KClass
 
 class KoGenProvider : SymbolProcessorProvider {
@@ -32,24 +32,31 @@ internal class KoGenProcessor(
         val beanFunctions: Sequence<KSFunctionDeclaration> =
             resolver.findAnnotations(KoGenBean::class)
                 .filterIsInstance<KSFunctionDeclaration>()
+        val viewModelClasses: Sequence<KSClassDeclaration> =
+            resolver.findAnnotations(KoGenViewModel::class)
+                .filterIsInstance<KSClassDeclaration>()
 
         if (!componentClasses.iterator().hasNext() &&
-            !beanFunctions.iterator().hasNext()
+            !beanFunctions.iterator().hasNext() &&
+            !viewModelClasses.iterator().hasNext()
         ) return emptyList()
 
         fileWriter.setPackageName(
             listOf(
                 *componentClasses.toList().toTypedArray(),
-                *beanFunctions.toList().toTypedArray()
+                *beanFunctions.toList().toTypedArray(),
             )
         )
 
         fileWriter.createBeansList(beanFunctions.toList())
         fileWriter.createComponentList(componentClasses.toList())
 
+        fileWriter.createViewModelList(viewModelClasses.toList())
+
         val result: MutableList<KSAnnotated> = mutableListOf()
         result.addAll(componentClasses.filterNot { it.validate() }.toList())
         result.addAll(beanFunctions.filterNot { it.validate() }.toList())
+        result.addAll(viewModelClasses.filterNot { it.validate() }.toList())
         return result
     }
 }

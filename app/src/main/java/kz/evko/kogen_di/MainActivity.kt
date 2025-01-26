@@ -19,7 +19,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
 import kz.evko.kogen_di.annotations.KoGenComponent
+import kz.evko.kogen_di.annotations.KoGenViewModel
 import kz.evko.kogen_di.test.NameUseCase
 import kz.evko.kogen_di.ui.theme.KoGenDITheme
 
@@ -40,9 +42,19 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@KoGenViewModel
+class MainViewModel(
+    private val nameUseCase: NameUseCase,
+) : ViewModel() {
+    fun getName(): String = nameUseCase.getName()
+}
+
 @Composable
-fun Greeting(modifier: Modifier = Modifier, nameUseCase: NameUseCase = inject()) {
-    var name by remember { mutableStateOf(nameUseCase.getName()) }
+fun Greeting(
+    modifier: Modifier = Modifier,
+    viewModel: MainViewModel = koGenViewModel(),
+) {
+    var name by remember { mutableStateOf(viewModel.getName()) }
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -56,7 +68,7 @@ fun Greeting(modifier: Modifier = Modifier, nameUseCase: NameUseCase = inject())
                 .fillMaxWidth()
                 .padding(16.dp),
             onClick = {
-                name = nameUseCase.getName()
+                name = viewModel.getName()
             }) {
             Text(text = "Update Name")
         }

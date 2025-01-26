@@ -10,6 +10,7 @@ import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import kz.evko.kogen_di.contentGenerator.BeansListGenerator
 import kz.evko.kogen_di.contentGenerator.ComponentListGenerator
 import kz.evko.kogen_di.contentGenerator.InjectFactoryGenerator
+import kz.evko.kogen_di.contentGenerator.ViewModelListGenerator
 import java.io.OutputStream
 
 internal class FileWriter(
@@ -30,13 +31,13 @@ internal class FileWriter(
         val listContent = generator.generateBeansList(beans)
 
         val file: OutputStream =
-            createFile(beans.toFileList(), "KoGenBeans")
+            createFile(beans.toFileList(), "KoGenBeansImpl")
         file += listContent
         file.close()
 
         val factoryContent = generator.generateBeansFactory(beans)
         val factoryFile: OutputStream =
-            createFile(beans.toFileList(), "KoGenBeansFactory")
+            createFile(beans.toFileList(), "KoGenBeansFactoryImpl")
         factoryFile += factoryContent
         factoryFile.close()
     }
@@ -49,17 +50,36 @@ internal class FileWriter(
         val content = generator.generateComponentList(components)
 
         val file: OutputStream =
-            createFile(components.toFileList(), "KoGenComponents")
+            createFile(components.toFileList(), "KoGenComponentsImpl")
         file += content
         file.close()
 
         val factoryContent = generator.createComponentFactory()
         val factoryFile: OutputStream =
-            createFile(components.toFileList(), "KoGenComponentsFactory")
+            createFile(components.toFileList(), "KoGenComponentsFactoryImpl")
         factoryFile += factoryContent
         factoryFile.close()
 
         createInjectFactory(components)
+    }
+
+    fun createViewModelList(viewModels: List<KSClassDeclaration>) {
+        logger.warn("Creating view model list")
+        logger.warn("View models count: ${viewModels.size}")
+
+        val generator = ViewModelListGenerator(logger, packageName)
+        val content = generator.generateViewModelList(viewModels)
+
+        val file: OutputStream =
+            createFile(viewModels.toFileList(), "KoGenViewModelsImpl")
+        file += content
+        file.close()
+
+        val factoryContent = generator.generateViewModelFactory()
+        val factoryFile: OutputStream =
+            createFile(viewModels.toFileList(), "KoGenViewModelScopeImpl")
+        factoryFile += factoryContent
+        factoryFile.close()
     }
 
     private fun createInjectFactory(components: List<KSClassDeclaration>) {
@@ -69,7 +89,7 @@ internal class FileWriter(
         val content = generator.generateBeansList()
 
         val file: OutputStream =
-            createFile(components.toFileList(), "KoGenInjectFactory")
+            createFile(components.toFileList(), "KoGenInjectors")
         file += content
         file.close()
     }
