@@ -45,11 +45,12 @@ class KoGenScope(
             componentsFactoryClass: Class<out KoGenComponentsFactory>,
         ): KoGenScope {
             return instance ?: synchronized(this) {
-                instance = KoGenScope(
+                instance ?: KoGenScope(
                     beansFactory = KoGenBeansFactory.getInstance(beansFactoryClass),
                     componentsFactory = KoGenComponentsFactory.getInstance(componentsFactoryClass),
-                )
-                instance!!
+                ).also {
+                    instance = it
+                }
             }
         }
     }

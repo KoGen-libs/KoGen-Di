@@ -22,9 +22,10 @@ class ComponentListGenerator(
             appendLine("): kz.evko.kogen_di.injector.KoGenComponents {")
 
             components.forEach {
-                componentItems[it.simpleName.asString()] = it.getName()
+                val name = it.createComponentNames()
+                componentItems[name] = it.getName()
                 val isSingleton = it.findSingletonParam(KoGenComponent::class)
-                appendLine("\t_${it.simpleName.asString()}($isSingleton, ${createNamesLine(it)}),")
+                appendLine("\t$name($isSingleton, ${createNamesLine(it)}),")
             }
             appendLine("\t;")
 
@@ -33,12 +34,12 @@ class ComponentListGenerator(
 
             components.forEach {
                 val values = it.primaryConstructor?.parameters.orEmpty()
-                val name = it.simpleName.asString()
+                val name = it.createComponentNames()
                 componentItems[name]?.let { fullName ->
                     if (values.isEmpty()) {
-                        appendLine("\t\t\t_$name -> $fullName()")
+                        appendLine("\t\t\t$name -> $fullName()")
                     } else {
-                        appendLine("\t\t\t_$name -> $fullName(")
+                        appendLine("\t\t\t$name -> $fullName(")
                         values.forEach { value ->
                             appendLine("\t\t\t\t${value.name?.asString()} = inject(),")
                         }
@@ -91,3 +92,6 @@ internal fun KSDeclaration.findSingletonParam(annotationClass: KClass<*>): Boole
 
 internal fun KSDeclaration.getName(): String =
     packageName.asString() + "." + simpleName.asString()
+
+internal fun KSDeclaration.createComponentNames(): String =
+    getName().replace(".", "_")

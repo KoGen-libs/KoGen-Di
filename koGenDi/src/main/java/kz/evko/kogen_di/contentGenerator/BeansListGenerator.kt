@@ -18,7 +18,7 @@ class BeansListGenerator(
                     val returnType = type.resolve().declaration
                     val isSingleton = it.findSingletonParam(KoGenBean::class)
                     appendLine(
-                        "\t_${returnType.simpleName.asString()}(singleton = $isSingleton),"
+                        "\t${returnType.createComponentNames()}(singleton = $isSingleton),"
                     )
                 }
             }
@@ -31,11 +31,11 @@ class BeansListGenerator(
                 beans.forEach {
                     it.returnType?.let { type ->
                         val returnType = type.resolve().declaration
-                        appendLine("\t\t\t_${returnType.simpleName.asString()} -> {")
+                        appendLine("\t\t\t${returnType.createComponentNames()} -> {")
                         if (it.parameters.isEmpty()) {
-                            appendLine("\t\t\t\t${it.packageName.asString()}.${it.simpleName.asString()}()")
+                            appendLine("\t\t\t\t${it.getName()}()")
                         } else {
-                            appendLine("\t\t\t\t${it.packageName.asString()}.${it.simpleName.asString()}(")
+                            appendLine("\t\t\t\t${it.getName()}(")
                             it.parameters.forEach { parameter ->
                                 appendLine("\t\t\t\t\t${parameter.name?.asString()} = inject(),")
                             }
@@ -62,7 +62,7 @@ class BeansListGenerator(
             beans.forEach {
                 it.returnType?.let { type ->
                     val returnType = type.resolve().declaration
-                    appendLine("\t\t${returnType.packageName.asString()}.${returnType.simpleName.asString()}::class.java to KoGenBeansImpl._${returnType.simpleName.asString()},")
+                    appendLine("\t\t${returnType.getName()}::class.java to KoGenBeansImpl.${returnType.createComponentNames()},")
                 }
             }
             appendLine("\t)")

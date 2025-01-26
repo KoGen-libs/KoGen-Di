@@ -30,8 +30,9 @@ abstract class KoGenComponentsFactory {
 
         fun getInstance(reference: Class<out KoGenComponentsFactory>): KoGenComponentsFactory {
             return instance ?: synchronized(this) {
-                instance = reference.getConstructor().newInstance()
-                instance!!
+                instance ?: reference.getConstructor().newInstance().also {
+                    instance = it
+                }
             }
         }
     }
