@@ -50,6 +50,10 @@ android {
     }
 }
 
+ksp {
+    arg("packageName", "kz.evko.kogen")
+}
+
 dependencies {
 
     implementation(libs.androidx.core.ktx)

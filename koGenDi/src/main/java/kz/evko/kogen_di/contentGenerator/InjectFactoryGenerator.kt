@@ -42,7 +42,6 @@ class InjectFactoryGenerator(
             appendLine("\t\t).getViewModel(modelClass) as T")
             appendLine("\t}")
             appendLine("}")
-
         }
     }
 }

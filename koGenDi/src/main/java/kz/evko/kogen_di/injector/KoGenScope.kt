@@ -34,10 +34,11 @@ class KoGenScope(
             beansFactoryClass: Class<out KoGenBeansFactory>,
             componentsFactoryClass: Class<out KoGenComponentsFactory>,
         ) {
-            getScope(
+            val scope = getScope(
                 beansFactoryClass = beansFactoryClass,
                 componentsFactoryClass = componentsFactoryClass,
-            ).applicationContext = context
+            )
+            scope.applicationContext = context
         }
 
         fun getScope(

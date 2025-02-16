@@ -18,23 +18,27 @@ class ViewModelListGenerator(
             }
             appendLine("\t;\n")
 
-            appendLine("\toverride fun getComponentObject(): androidx.lifecycle.ViewModel {")
-            appendLine("\t\treturn when (this) {")
+            appendLine("\toverride fun getComponentObject(): Any {")
+            if (viewModels.isNotEmpty()) {
+                appendLine("\t\treturn when (this) {")
 
-            viewModels.forEach {
-                it.primaryConstructor?.parameters.orEmpty().run {
-                    if (isEmpty()) {
-                        appendLine("\t\t\t${it.createComponentNames()} -> ${it.getName()}()")
-                    } else {
-                        appendLine("\t\t\t${it.createComponentNames()} -> ${it.getName()}(")
-                        forEach { param ->
-                            appendLine("\t\t\t\t${param.name?.asString()} = inject(),")
+                viewModels.forEach {
+                    it.primaryConstructor?.parameters.orEmpty().run {
+                        if (isEmpty()) {
+                            appendLine("\t\t\t${it.createComponentNames()} -> ${it.getName()}()")
+                        } else {
+                            appendLine("\t\t\t${it.createComponentNames()} -> ${it.getName()}(")
+                            forEach { param ->
+                                appendLine("\t\t\t\t${param.name?.asString()} = inject(),")
+                            }
+                            appendLine("\t\t\t)")
                         }
-                        appendLine("\t\t\t)")
                     }
                 }
+                appendLine("\t\t}")
+            } else {
+                appendLine("\t\treturn Any()")
             }
-            appendLine("\t\t}")
             appendLine("\t}")
 
             appendLine("}")

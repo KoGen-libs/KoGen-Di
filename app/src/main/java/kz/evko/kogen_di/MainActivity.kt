@@ -20,6 +20,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
+import kz.evko.kogen.di.koGenViewModel
+import kz.evko.kogen.di.setApplicationContext
 import kz.evko.kogen_di.annotations.KoGenComponent
 import kz.evko.kogen_di.annotations.KoGenViewModel
 import kz.evko.kogen_di.test.NameUseCase

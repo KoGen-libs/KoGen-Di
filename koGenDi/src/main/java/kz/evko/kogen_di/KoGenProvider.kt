@@ -17,12 +17,13 @@ import kotlin.reflect.KClass
 class KoGenProvider : SymbolProcessorProvider {
     override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor {
         val fileWriter = FileWriter(environment.logger, environment.codeGenerator)
-        return KoGenProcessor(environment.logger, fileWriter)
+        return KoGenProcessor(environment.logger, environment.options, fileWriter)
     }
 }
 
 internal class KoGenProcessor(
     private val logger: KSPLogger,
+    private val args: Map<String, String>,
     private val fileWriter: FileWriter
 ) : SymbolProcessor {
     override fun process(resolver: Resolver): List<KSAnnotated> {
@@ -36,17 +37,16 @@ internal class KoGenProcessor(
             resolver.findAnnotations(KoGenViewModel::class)
                 .filterIsInstance<KSClassDeclaration>()
 
-        if (!componentClasses.iterator().hasNext() &&
-            !beanFunctions.iterator().hasNext() &&
-            !viewModelClasses.iterator().hasNext()
-        ) return emptyList()
+        val packageName = args["packageName"]
 
         fileWriter.setPackageName(
+            packageName,
             listOf(
                 *componentClasses.toList().toTypedArray(),
                 *beanFunctions.toList().toTypedArray(),
             )
         )
+        fileWriter.createInjectFactory()
 
         fileWriter.createBeansList(beanFunctions.toList())
         fileWriter.createComponentList(componentClasses.toList())
