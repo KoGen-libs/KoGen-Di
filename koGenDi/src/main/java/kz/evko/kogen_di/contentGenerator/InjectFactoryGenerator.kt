@@ -3,7 +3,7 @@ package kz.evko.kogen_di.contentGenerator
 class InjectFactoryGenerator(
     private val packageName: String,
 ) {
-    fun generateBeansList(): String {
+    fun generateInjectors(includeViewModelInjector: Boolean): String {
         return buildString {
             appendLine("package $packageName\n")
 
@@ -28,20 +28,36 @@ class InjectFactoryGenerator(
             appendLine("\t)")
             appendLine("}\n")
 
-            appendLine("inline fun <reified T : androidx.lifecycle.ViewModel> koGenViewModel(): T {")
-            appendLine("\treturn androidx.lifecycle.ViewModelProvider(")
-            appendLine("\t\tstore = androidx.lifecycle.ViewModelStore(),")
-            appendLine("\t\tfactory = KoGenViewModelFactory(),")
-            appendLine("\t)[T::class.java]")
-            appendLine("}\n")
+            if (includeViewModelInjector) {
+                appendLine("@androidx.compose.runtime.Composable")
+                appendLine("inline fun <reified T : androidx.lifecycle.ViewModel> koGenViewModel(): T {")
+                appendLine("\tval viewModelStoreOwner: androidx.lifecycle.ViewModelStoreOwner = checkNotNull(")
+                appendLine("\t\tandroidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner.current")
+                appendLine("\t) {")
+                appendLine("\t\t\"No ViewModelStoreOwner was provided\"")
+                appendLine("\t}")
 
-            appendLine("class KoGenViewModelFactory : androidx.lifecycle.ViewModelProvider.Factory {")
-            appendLine("\toverride fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {")
-            appendLine("\t\treturn kz.evko.kogen_di.viewModel.KoGenViewModelScope.getInstance(")
-            appendLine("\t\t\tKoGenViewModelScopeImpl::class.java")
-            appendLine("\t\t).getViewModel(modelClass) as T")
-            appendLine("\t}")
-            appendLine("}")
+                appendLine("\treturn androidx.compose.runtime.currentComposer.run {")
+                appendLine("\t\tandroidx.compose.runtime.remember {")
+                appendLine("\t\t\tval scope = kz.evko.kogen_di.viewModel.KoGenViewModelScope.getInstance(")
+                appendLine("\t\t\t\treference = KoGenViewModelScopeImpl::class.java,")
+                appendLine("\t\t\t)")
+                appendLine("\t\t\tandroidx.lifecycle.ViewModelProvider(")
+                appendLine("\t\t\t\tstore = viewModelStoreOwner.viewModelStore,")
+                appendLine("\t\t\t\tfactory = KoGenViewModelFactory(scope),")
+                appendLine("\t\t\t)[T::class.java]")
+                appendLine("\t\t}")
+                appendLine("\t}")
+                appendLine("}\n")
+
+                appendLine("class KoGenViewModelFactory(")
+                appendLine("\tprivate val scope: kz.evko.kogen_di.viewModel.KoGenViewModelScope")
+                appendLine(") : androidx.lifecycle.ViewModelProvider.Factory {")
+                appendLine("\toverride fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {")
+                appendLine("\t\treturn scope.getViewModel(modelClass) as T")
+                appendLine("\t}")
+                appendLine("}")
+            }
         }
     }
 }

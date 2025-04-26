@@ -89,7 +89,7 @@ class ComponentListGenerator(
 
 internal fun KSDeclaration.findSingletonParam(annotationClass: KClass<*>): Boolean {
     val annotation =
-        this.annotations.firstOrNull { it.shortName.asString() == annotationClass::class.simpleName.toString() }
+        this.annotations.firstOrNull { it.shortName.asString() == annotationClass.simpleName }
     val name = annotation?.arguments?.firstOrNull { it.name?.asString() == "singleton" }
     return name?.value == true
 }

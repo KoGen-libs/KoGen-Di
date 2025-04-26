@@ -37,16 +37,19 @@ internal class KoGenProcessor(
             resolver.findAnnotations(KoGenViewModel::class)
                 .filterIsInstance<KSClassDeclaration>()
 
-        val packageName = args["packageName"]
-
         fileWriter.setPackageName(
-            packageName,
+            args["packageName"],
             listOf(
                 *componentClasses.toList().toTypedArray(),
                 *beanFunctions.toList().toTypedArray(),
             )
         )
-        fileWriter.createInjectFactory()
+        fileWriter.createInjectFactory(args["includeViewModelInjector"] == "true")
+
+        if (!componentClasses.iterator().hasNext() &&
+            !beanFunctions.iterator().hasNext() &&
+            !viewModelClasses.iterator().hasNext()
+        ) return emptyList()
 
         fileWriter.createBeansList(beanFunctions.toList())
         fileWriter.createComponentList(componentClasses.toList())

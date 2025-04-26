@@ -96,12 +96,12 @@ internal class FileWriter(
         }
     }
 
-    fun createInjectFactory() {
+    fun createInjectFactory(includeViewModelInjector: Boolean) {
         try {
             logger.warn("Creating component factory")
 
             val generator = InjectFactoryGenerator(packageName)
-            val content = generator.generateBeansList()
+            val content = generator.generateInjectors(includeViewModelInjector)
 
             val file: OutputStream =
                 createFile(emptyList(), "KoGenInjectors")
@@ -117,7 +117,7 @@ internal class FileWriter(
         fileName: String,
     ) = codeGenerator.createNewFile(
         Dependencies(
-            false,
+            true,
             *files.toList().toTypedArray(),
         ),
         packageName,
