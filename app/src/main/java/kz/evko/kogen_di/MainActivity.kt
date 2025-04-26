@@ -12,18 +12,20 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kz.evko.kogen.di.koGenViewModel
+import kz.evko.kogen.di.setApplicationContext
 import kz.evko.kogen_di.annotations.KoGenComponent
 import kz.evko.kogen_di.annotations.KoGenViewModel
 import kz.evko.kogen_di.test.NameUseCase
 import kz.evko.kogen_di.ui.theme.KoGenDITheme
+import java.util.UUID
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,21 +48,34 @@ class MainActivity : ComponentActivity() {
 class MainViewModel(
     private val nameUseCase: NameUseCase,
 ) : ViewModel() {
-    fun getName(): String = nameUseCase.getName()
+
+    val state: MutableStateFlow<MainState> = MutableStateFlow(MainState())
+
+    init {
+        state.value = state.value.copy(name = nameUseCase.getName())
+    }
+
+    fun getName(name: String) {
+        state.value = state.value.copy(name = name)
+    }
 }
+
+data class MainState(
+    val name: String = "",
+)
 
 @Composable
 fun Greeting(
     modifier: Modifier = Modifier,
     viewModel: MainViewModel = koGenViewModel(),
 ) {
-    var name by remember { mutableStateOf(viewModel.getName()) }
+    val state by viewModel.state.collectAsState()
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = "Hello ${name}!",
+            text = "Hello ${state.name}!",
         )
 
         Button(
@@ -68,7 +83,7 @@ fun Greeting(
                 .fillMaxWidth()
                 .padding(16.dp),
             onClick = {
-                name = viewModel.getName()
+                viewModel.getName("Oh no, the scope workes: \n${UUID.randomUUID()}")
             }) {
             Text(text = "Update Name")
         }
@@ -81,9 +96,8 @@ interface ApiSource {
 
 @KoGenComponent
 class ApiSourceImpl(
-    private val baseUrl: String,
 ) : ApiSource {
-    override fun getName(): String = baseUrl//UUID.randomUUID().toString()
+    override fun getName(): String = UUID.randomUUID().toString()
 }
 
 @KoGenComponent(singleton = true)

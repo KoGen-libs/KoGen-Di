@@ -19,79 +19,97 @@ internal class FileWriter(
 ) {
     private var packageName = ""
 
-    fun setPackageName(components: List<KSDeclaration>) {
-        if (components.isNotEmpty()) packageName = components.first().packageName.asString()
+    fun setPackageName(paramsPackageName: String?, components: List<KSDeclaration>) {
+        packageName = paramsPackageName?.plus(".di").takeIf {
+            !it.isNullOrEmpty()
+        } ?: run {
+            val packageParts = components.firstOrNull()?.packageName?.asString()?.split(".")
+            packageParts?.subList(0, 3)?.joinToString(".")?.plus(".di") ?: "kz.evko.kogen_di"
+        }
     }
 
     fun createBeansList(beans: List<KSFunctionDeclaration>) {
-        logger.warn("Creating beans list")
-        logger.warn("Beans count: ${beans.size}")
+        try {
+            logger.warn("Creating beans list")
 
-        val generator = BeansListGenerator(logger, packageName)
-        val listContent = generator.generateBeansList(beans)
+            val generator = BeansListGenerator(logger, packageName)
+            val listContent = generator.generateBeansList(beans)
 
-        val file: OutputStream =
-            createFile(beans.toFileList(), "KoGenBeansImpl")
-        file += listContent
-        file.close()
+            val file: OutputStream =
+                createFile(beans.toFileList(), "KoGenBeansImpl")
+            file += listContent
+            file.close()
 
-        val factoryContent = generator.generateBeansFactory(beans)
-        val factoryFile: OutputStream =
-            createFile(beans.toFileList(), "KoGenBeansFactoryImpl")
-        factoryFile += factoryContent
-        factoryFile.close()
+            val factoryContent = generator.generateBeansFactory(beans)
+            val factoryFile: OutputStream =
+                createFile(beans.toFileList(), "KoGenBeansFactoryImpl")
+            factoryFile += factoryContent
+            factoryFile.close()
+        } catch (e: Exception) {
+            logger.warn("Exception: ${e.message}")
+        }
     }
 
     fun createComponentList(components: List<KSClassDeclaration>) {
-        logger.warn("Creating component list")
-        logger.warn("Components count: ${components.size}")
+        try {
+            logger.warn("Creating component list")
+            logger.warn("Components count: ${components.size}")
 
-        val generator = ComponentListGenerator(logger, packageName)
-        val content = generator.generateComponentList(components)
+            val generator = ComponentListGenerator(logger, packageName)
+            val content = generator.generateComponentList(components)
 
-        val file: OutputStream =
-            createFile(components.toFileList(), "KoGenComponentsImpl")
-        file += content
-        file.close()
+            val file: OutputStream =
+                createFile(components.toFileList(), "KoGenComponentsImpl")
+            file += content
+            file.close()
 
-        val factoryContent = generator.createComponentFactory()
-        val factoryFile: OutputStream =
-            createFile(components.toFileList(), "KoGenComponentsFactoryImpl")
-        factoryFile += factoryContent
-        factoryFile.close()
-
-        createInjectFactory(components)
+            val factoryContent = generator.createComponentFactory()
+            val factoryFile: OutputStream =
+                createFile(components.toFileList(), "KoGenComponentsFactoryImpl")
+            factoryFile += factoryContent
+            factoryFile.close()
+        } catch (e: Exception) {
+            logger.warn("Exception: ${e.message}")
+        }
     }
 
     fun createViewModelList(viewModels: List<KSClassDeclaration>) {
-        logger.warn("Creating view model list")
-        logger.warn("View models count: ${viewModels.size}")
+        try {
+            logger.warn("Creating view model list")
+            logger.warn("View models count: ${viewModels.size}")
 
-        val generator = ViewModelListGenerator(logger, packageName)
-        val content = generator.generateViewModelList(viewModels)
+            val generator = ViewModelListGenerator(logger, packageName)
+            val content = generator.generateViewModelList(viewModels)
 
-        val file: OutputStream =
-            createFile(viewModels.toFileList(), "KoGenViewModelsImpl")
-        file += content
-        file.close()
+            val file: OutputStream =
+                createFile(viewModels.toFileList(), "KoGenViewModelsImpl")
+            file += content
+            file.close()
 
-        val factoryContent = generator.generateViewModelFactory()
-        val factoryFile: OutputStream =
-            createFile(viewModels.toFileList(), "KoGenViewModelScopeImpl")
-        factoryFile += factoryContent
-        factoryFile.close()
+            val factoryContent = generator.generateViewModelFactory()
+            val factoryFile: OutputStream =
+                createFile(viewModels.toFileList(), "KoGenViewModelScopeImpl")
+            factoryFile += factoryContent
+            factoryFile.close()
+        } catch (e: Exception) {
+            logger.warn("Exception: ${e.message}")
+        }
     }
 
-    private fun createInjectFactory(components: List<KSClassDeclaration>) {
-        logger.warn("Creating component factory")
+    fun createInjectFactory(includeViewModelInjector: Boolean) {
+        try {
+            logger.warn("Creating component factory")
 
-        val generator = InjectFactoryGenerator(packageName)
-        val content = generator.generateBeansList()
+            val generator = InjectFactoryGenerator(packageName)
+            val content = generator.generateInjectors(includeViewModelInjector)
 
-        val file: OutputStream =
-            createFile(components.toFileList(), "KoGenInjectors")
-        file += content
-        file.close()
+            val file: OutputStream =
+                createFile(emptyList(), "KoGenInjectors")
+            file += content
+            file.close()
+        } catch (e: Exception) {
+            logger.warn("Exception: ${e.message}")
+        }
     }
 
     private fun createFile(
@@ -99,7 +117,7 @@ internal class FileWriter(
         fileName: String,
     ) = codeGenerator.createNewFile(
         Dependencies(
-            false,
+            true,
             *files.toList().toTypedArray(),
         ),
         packageName,

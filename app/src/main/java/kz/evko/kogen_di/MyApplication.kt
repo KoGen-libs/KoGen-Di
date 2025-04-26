@@ -12,6 +12,6 @@ class MyApplication : Application() {
     }
 }
 
-@KoGenBean
+@KoGenBean(true)
 fun baseUrl(context: Context): String = "https://api.example.com/"
     .plus(context.getString(R.string.app_name))

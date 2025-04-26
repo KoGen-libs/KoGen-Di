@@ -30,25 +30,29 @@ class ComponentListGenerator(
             appendLine("\t;")
 
             appendLine("\toverride fun getComponentObject(): Any {")
-            appendLine("\t\treturn when (this) {")
+            if (components.isNotEmpty()) {
+                appendLine("\t\treturn when (this) {")
 
-            components.forEach {
-                val values = it.primaryConstructor?.parameters.orEmpty()
-                val name = it.createComponentNames()
-                componentItems[name]?.let { fullName ->
-                    if (values.isEmpty()) {
-                        appendLine("\t\t\t$name -> $fullName()")
-                    } else {
-                        appendLine("\t\t\t$name -> $fullName(")
-                        values.forEach { value ->
-                            appendLine("\t\t\t\t${value.name?.asString()} = inject(),")
+                components.forEach {
+                    val values = it.primaryConstructor?.parameters.orEmpty()
+                    val name = it.createComponentNames()
+                    componentItems[name]?.let { fullName ->
+                        if (values.isEmpty()) {
+                            appendLine("\t\t\t$name -> $fullName()")
+                        } else {
+                            appendLine("\t\t\t$name -> $fullName(")
+                            values.forEach { value ->
+                                appendLine("\t\t\t\t${value.name?.asString()} = inject(),")
+                            }
+                            appendLine("\t\t\t)\n")
                         }
-                        appendLine("\t\t\t)\n")
                     }
                 }
-            }
 
-            appendLine("\t\t}")
+                appendLine("\t\t}")
+            } else {
+                appendLine("\t\treturn Any()")
+            }
             appendLine("\t}")
 
             appendLine("}")
@@ -85,7 +89,7 @@ class ComponentListGenerator(
 
 internal fun KSDeclaration.findSingletonParam(annotationClass: KClass<*>): Boolean {
     val annotation =
-        this.annotations.firstOrNull { it.shortName.asString() == annotationClass::class.simpleName.toString() }
+        this.annotations.firstOrNull { it.shortName.asString() == annotationClass.simpleName }
     val name = annotation?.arguments?.firstOrNull { it.name?.asString() == "singleton" }
     return name?.value == true
 }
