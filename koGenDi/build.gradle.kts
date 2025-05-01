@@ -5,6 +5,9 @@ plugins {
     id("maven-publish")
 }
 
+group = properties["GROUP"].toString()
+version = properties["VERSION_NAME"].toString()
+
 java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
@@ -24,18 +27,37 @@ dependencies {
 
 publishing {
     publications {
-        register<MavenPublication>("release") {
-            groupId = "kz.evko.koGen"
-            artifactId = "di"
-            version = System.getenv("VERSION") ?: "1.0.0"
-
+        create<MavenPublication>("release") {
             from(components["java"])
+
+            groupId = properties["GROUP"].toString()
+            artifactId = "android-di"
+
+            pom {
+                name.set(project.properties["POM_NAME"].toString())
+                description.set(project.description)
+
+                licenses {
+                    license {
+                        name.set("The Apache Software License, Version 2.0")
+                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                        distribution.set("repo")
+                    }
+                }
+
+                developers {
+                    developer {
+                        id.set("EugenProg")
+                        name.set("Eugen Kopp")
+                        email.set("Eugen.kopp.kz@gmail.com")
+                    }
+                }
+            }
         }
     }
     repositories {
         maven {
-            name = "di_repo"
-            url = uri("${projectDir.path}/repo")
+            setUrl(layout.buildDirectory.dir("staging-deploy"))
         }
     }
 }
