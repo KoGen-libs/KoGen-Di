@@ -8,6 +8,7 @@ composeBom = "2025.04.01"
 jetbrainsKotlinJvm = "1.9.0"
 symbolProcessingApi = "2.1.0-1.0.29"
 viewmodelAndroid = "2.8.7"
+jreleaser = "1.14.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -28,4 +29,5 @@ kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "jetbrainsKotlinJvm" }
 kspAndroid = { id = "com.google.devtools.ksp", version.ref = "symbolProcessingApi" }
+jreleaser = { id = "org.jreleaser", version.ref = "jreleaser" }
 

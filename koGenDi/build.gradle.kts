@@ -1,7 +1,10 @@
+import org.jreleaser.model.Active
+
 plugins {
     id("java-library")
     alias(libs.plugins.jetbrains.kotlin.jvm)
     alias(libs.plugins.kspAndroid)
+    alias(libs.plugins.jreleaser)
     id("maven-publish")
 }
 
@@ -58,6 +61,39 @@ publishing {
     repositories {
         maven {
             setUrl(layout.buildDirectory.dir("staging-deploy"))
+        }
+    }
+}
+
+jreleaser {
+    project {
+        inceptionYear = "2025"
+        author("@KoGen")
+    }
+    release {
+        github {
+            skipRelease = true
+            skipTag = true
+            sign = true
+            branch = "master"
+            branchPush = "master"
+            overwrite = true
+        }
+    }
+    signing {
+        active = Active.ALWAYS
+        armored = true
+        verify = true
+    }
+    deploy {
+        maven {
+            mavenCentral.create("sonatype") {
+                active = Active.ALWAYS
+                url = "https://central.sonatype.com/api/v1/publisher"
+                stagingRepository(layout.buildDirectory.dir("staging-deploy").get().toString())
+                setAuthorization("Basic")
+                retryDelay = 60
+            }
         }
     }
 }
