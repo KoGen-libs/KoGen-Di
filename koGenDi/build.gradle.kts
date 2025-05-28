@@ -8,8 +8,8 @@ plugins {
     id("maven-publish")
 }
 
-group = properties["GROUP"].toString()
-version = properties["VERSION_NAME"].toString()
+group = project.properties["GROUP"].toString()
+version = project.properties["VERSION_NAME"].toString()
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -66,6 +66,10 @@ publishing {
 }
 
 jreleaser {
+    gitRootSearch = true
+    environment {
+        setVariables("${rootDir.path}/config.toml")
+    }
     project {
         inceptionYear = "2025"
         author("@KoGen")
