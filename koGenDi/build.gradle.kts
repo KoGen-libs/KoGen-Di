@@ -46,6 +46,7 @@ publishing {
             pom {
                 name.set("KoGen DI")
                 description.set("The best DI for Android)")
+                url.set("https://github.com/EugenProg/KoGen-Di")
 
                 licenses {
                     license {
