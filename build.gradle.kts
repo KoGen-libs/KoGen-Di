@@ -5,11 +5,3 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.jvm) apply false
     alias(libs.plugins.compose.compiler) apply false
 }
-
-allprojects {
-    configurations.all {
-        resolutionStrategy {
-            force("org.apache.commons:commons-compress:1.26.2")
-        }
-    }
-}

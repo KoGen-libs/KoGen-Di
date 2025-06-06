@@ -1,5 +1,3 @@
-import org.jreleaser.model.Active
-
 plugins {
     id("java-library")
     alias(libs.plugins.jetbrains.kotlin.jvm)
@@ -85,42 +83,4 @@ signing {
     useInMemoryPgpKeys(signingKey, signingPassword)
 
     sign(publishing.publications["release"])
-}
-
-jreleaser {
-    gitRootSearch = true
-    project {
-        inceptionYear = "2025"
-        author("@KoGen")
-    }
-    release {
-        github {
-            skipRelease = true
-            skipTag = true
-            sign = true
-            branch = "master"
-            branchPush = "master"
-            overwrite = true
-        }
-    }
-    signing {
-        active = Active.ALWAYS
-        armored = true
-        verify = true
-    }
-    deploy {
-        maven {
-            mavenCentral.create("sonatype") {
-                active = Active.ALWAYS
-                url = "https://central.sonatype.com/api/v1/publisher"
-                stagingRepository(layout.buildDirectory.dir("staging-deploy").get().toString())
-                setAuthorization("Basic")
-                retryDelay = 60
-            }
-        }
-    }
-}
-
-tasks.named("jreleaserFullRelease") {
-    dependsOn("publish")
 }
