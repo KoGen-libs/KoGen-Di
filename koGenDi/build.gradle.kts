@@ -41,7 +41,7 @@ publishing {
             from(components["java"])
 
             groupId = properties["GROUP"].toString()
-            artifactId = "android-di"
+            artifactId = "di"
 
             pom {
                 name.set("KoGen DI")
