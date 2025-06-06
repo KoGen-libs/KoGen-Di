@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kspAndroid)
     alias(libs.plugins.jreleaser)
     id("maven-publish")
+    id("signing")
 }
 
 group = project.properties["GROUP"].toString()
@@ -14,6 +15,8 @@ version = project.properties["VERSION_NAME"].toString()
 java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
+    withSourcesJar()
+    withJavadocJar()
 }
 
 kotlin {
@@ -42,9 +45,8 @@ publishing {
 
                 licenses {
                     license {
-                        name.set("The Apache Software License, Version 2.0")
+                        name.set("The Apache License, Version 2.0")
                         url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
-                        distribution.set("repo")
                     }
                 }
 
@@ -54,6 +56,12 @@ publishing {
                         name.set("Eugen Kopp")
                         email.set("Eugen.kopp.kz@gmail.com")
                     }
+                }
+
+                scm {
+                    connection.set("scm:git:git://github.com/EugenProg/KoGen-Di.git")
+                    developerConnection.set("scm:git:ssh://github.com:EugenProg/KoGen-Di.git")
+                    url.set("https://github.com/EugenProg/KoGen-Di/tree/master")
                 }
             }
         }
@@ -65,11 +73,16 @@ publishing {
     }
 }
 
+signing {
+    val signingKey = System.getenv("GPG_SIGNING_KEY")
+    val signingPassword = System.getenv("GPG_SIGNING_PASSWORD")
+    useInMemoryPgpKeys(signingKey, signingPassword)
+
+    sign(publishing.publications["release"])
+}
+
 jreleaser {
     gitRootSearch = true
-//    environment {
-//        setVariables("${rootDir.path}/config.toml")
-//    }
     project {
         inceptionYear = "2025"
         author("@KoGen")
