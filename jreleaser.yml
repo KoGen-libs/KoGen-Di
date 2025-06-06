@@ -16,6 +16,6 @@ signing:
 deploy:
   maven:
     mavenCentral:
-      type: mavencentral
+      type: maven-central
       active: ALWAYS
       stagingDirectory: koGenDi/build/staging-deploy
