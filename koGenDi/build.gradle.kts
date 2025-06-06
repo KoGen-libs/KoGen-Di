@@ -67,9 +67,9 @@ publishing {
 
 jreleaser {
     gitRootSearch = true
-    environment {
-        setVariables("${rootDir.path}/config.toml")
-    }
+//    environment {
+//        setVariables("${rootDir.path}/config.toml")
+//    }
     project {
         inceptionYear = "2025"
         author("@KoGen")
