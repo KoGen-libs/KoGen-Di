@@ -9,12 +9,6 @@ plugins {
     id("signing")
 }
 
-configurations.all {
-    resolutionStrategy {
-        force("org.apache.commons:commons-compress:1.26.2")
-    }
-}
-
 group = project.properties["GROUP"].toString()
 version = project.properties["VERSION_NAME"].toString()
 
@@ -35,6 +29,12 @@ sourceSets.main {
 
 dependencies {
     implementation(libs.symbol.processing)
+
+    constraints {
+        implementation("org.apache.commons:commons-compress:1.26.2") {
+            because("JReleaser requires this version to avoid a conflict")
+        }
+    }
 }
 
 publishing {

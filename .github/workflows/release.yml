@@ -28,9 +28,9 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
-
-      - name: Build and publish with Gradle
-        run: ./gradlew --no-daemon -i :koGenDi:jreleaserConfig :koGenDi:build :koGenDi:test :koGenDi:publish
+#
+#      - name: Build and publish with Gradle
+#        run: ./gradlew --no-daemon -i :koGenDi:jreleaserConfig :koGenDi:build :koGenDi:test :koGenDi:publish
 
       - name: Release with gradle
         run: ./gradlew --no-daemon -i :koGenDi:jreleaserFullRelease
