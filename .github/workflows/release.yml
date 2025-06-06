@@ -27,6 +27,12 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.JRELEASER_GPG_SECRET_KEY }}
+          passphrase: ${{ secrets.JRELEASER_GPG_PASSPHRASE }}
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
@@ -34,7 +40,7 @@ jobs:
         run: ./gradlew :koGenDi:publish
 
       - name: Extract GroupId from gradle.properties
-        id: props # Даем этому шагу ID, чтобы ссылаться на его результат
+        id: props
         run: |
           echo "group_id=$(grep '^GROUP=' gradle.properties | cut -d'=' -f2)" >> "$GITHUB_OUTPUT"
 

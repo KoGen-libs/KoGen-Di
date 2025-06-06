@@ -14,7 +14,6 @@ project:
 signing:
   active: ALWAYS
   armored: true
-  publicKey: '{{env.JRELEASER_GPG_PUBLIC_KEY}}'
 
 # Настройки загрузки в Maven Central
 deploy:
