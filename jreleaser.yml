@@ -15,7 +15,7 @@ signing:
 # Настройки загрузки в Maven Central
 deploy:
   maven:
-    mavenCentral:
-      type: maven-central
+    centralPortal:
+      type: central-portal
       active: ALWAYS
       stagingDirectory: koGenDi/build/staging-deploy
