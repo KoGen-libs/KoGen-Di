@@ -9,6 +9,12 @@ plugins {
     id("signing")
 }
 
+configurations.all {
+    resolutionStrategy {
+        force("org.apache.commons:commons-compress:1.26.2")
+    }
+}
+
 group = project.properties["GROUP"].toString()
 version = project.properties["VERSION_NAME"].toString()
 
