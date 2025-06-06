@@ -74,8 +74,8 @@ publishing {
 }
 
 signing {
-    val signingKey = System.getenv("GPG_SIGNING_KEY")
-    val signingPassword = System.getenv("GPG_SIGNING_PASSWORD")
+    val signingKey = System.getenv("JRELEASER_GPG_SECRET_KEY")
+    val signingPassword = System.getenv("JRELEASER_GPG_PASSPHRASE")
     useInMemoryPgpKeys(signingKey, signingPassword)
 
     sign(publishing.publications["release"])
