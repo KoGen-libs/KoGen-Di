@@ -16,5 +16,7 @@ signing:
 deploy:
   maven:
     mavenCentral:
-      url: https://central.sonatype.com/api/v1/publisher
-      stagingDirectory: koGenDi/build/staging-deploy
+      sonatype:
+        active: 'ALWAYS'
+        stagingRepositories:
+          - 'koGenDi/build/staging-deploy'
