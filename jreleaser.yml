@@ -6,11 +6,15 @@ project:
     - Eugen Kopp
   license: Apache-2.0
   inceptionYear: '2025'
+  languages:
+    java:
+      groupId: '{{env.PROJECT_GROUP_ID}}'
 
 # Настройки GPG-подписи
 signing:
   active: ALWAYS
   armored: true
+  publicKey: '{{env.JRELEASER_GPG_PUBLIC_KEY}}'
 
 # Настройки загрузки в Maven Central
 deploy:
@@ -20,3 +24,5 @@ deploy:
         active: 'ALWAYS'
         stagingRepositories:
           - 'koGenDi/build/staging-deploy'
+        url: 'https://central.sonatype.com/api/v1/publisher'
+        namespace: '{{env.PROJECT_GROUP_ID}}'

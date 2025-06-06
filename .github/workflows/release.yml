@@ -6,6 +6,7 @@ on:
       - '*'
 
 env:
+  JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.JRELEASER_GPG_PUBLIC_KEY }}
   JRELEASER_GPG_SECRET_KEY: ${{ secrets.JRELEASER_GPG_SECRET_KEY }}
   JRELEASER_GPG_PASSPHRASE: ${{ secrets.JRELEASER_GPG_PASSPHRASE }}
   JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -32,7 +33,14 @@ jobs:
       - name: Build and create artifacts
         run: ./gradlew :koGenDi:publish
 
+      - name: Extract GroupId from gradle.properties
+        id: props # Даем этому шагу ID, чтобы ссылаться на его результат
+        run: |
+          echo "group_id=$(grep '^GROUP=' gradle.properties | cut -d'=' -f2)" >> "$GITHUB_OUTPUT"
+
       - name: Release with JReleaser
         uses: jreleaser/release-action@v2
         with:
           arguments: full-release
+        env:
+          PROJECT_GROUP_ID: ${{ steps.props.outputs.group_id }}
