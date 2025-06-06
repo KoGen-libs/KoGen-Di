@@ -1,13 +1,5 @@
 import org.jreleaser.model.Active
 
-buildscript {
-    configurations.all {
-        resolutionStrategy {
-            force("org.apache.commons:commons-compress:1.26.2")
-        }
-    }
-}
-
 plugins {
     id("java-library")
     alias(libs.plugins.jetbrains.kotlin.jvm)
