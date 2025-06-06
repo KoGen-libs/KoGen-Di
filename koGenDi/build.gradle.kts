@@ -40,8 +40,8 @@ publishing {
             artifactId = "android-di"
 
             pom {
-                name.set(project.properties["POM_NAME"].toString())
-                description.set(project.description)
+                name.set("KoGen DI")
+                description.set("The best DI for Android)")
 
                 licenses {
                     license {
