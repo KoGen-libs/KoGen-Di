@@ -27,6 +27,10 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
+      - name: Get the version from the tag
+        id: get_version
+        run: echo "TAG_VERSION=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@v6
         with:
@@ -37,7 +41,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
 
       - name: Build and create artifacts
-        run: ./gradlew :koGenDi:publish
+        run: ./gradlew :koGenDi:publish -Pversion=${{ steps.get_version.outputs.TAG_VERSION }}
 
       - name: Extract GroupId from gradle.properties
         id: props

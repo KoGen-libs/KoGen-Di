@@ -8,7 +8,6 @@ plugins {
 }
 
 group = project.properties["GROUP"].toString()
-version = project.properties["VERSION_NAME"].toString()
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -41,12 +40,12 @@ publishing {
             from(components["java"])
 
             groupId = properties["GROUP"].toString()
-            artifactId = "di"
+            artifactId = "android-di"
 
             pom {
                 name.set("KoGen DI")
                 description.set("The best DI for Android)")
-                url.set("https://github.com/EugenProg/KoGen-Di")
+                url.set("https://github.com/EugenProg/KoGen-DI_demo")
 
                 licenses {
                     license {

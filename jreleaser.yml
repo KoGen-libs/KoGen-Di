@@ -1,6 +1,5 @@
 project:
   name: KoGenDi
-  version: '1.0.0'
   description: A dependency injection library for Kotlin
   authors:
     - Eugen Kopp
