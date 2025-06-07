@@ -9,6 +9,10 @@ project:
     java:
       groupId: '{{env.PROJECT_GROUP_ID}}'
 
+release:
+  github:
+    branch: 'master'
+
 # Настройки GPG-подписи
 signing:
   active: ALWAYS
