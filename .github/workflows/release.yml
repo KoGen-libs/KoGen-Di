@@ -16,6 +16,8 @@ env:
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -40,13 +42,6 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      - name: Read GROUP property from gradle.properties
-        id: props
-        uses: christian-draeger/read-properties@1.1.1
-        with:
-          path: './gradle.properties'
-          property: 'GROUP'
-
       - name: Build and create artifacts
         run: ./gradlew :koGenDi:publish -Pversion=${{ steps.get_version.outputs.TAG_VERSION }}
 
@@ -55,5 +50,4 @@ jobs:
         with:
           arguments: full-release
         env:
-          PROJECT_GROUP_ID: ${{ steps.props.outputs.value }}
           JRELEASER_PROJECT_VERSION: ${{ steps.get_version.outputs.TAG_VERSION }}

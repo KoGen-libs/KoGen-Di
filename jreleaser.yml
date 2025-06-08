@@ -7,7 +7,7 @@ project:
   inceptionYear: '2025'
   languages:
     java:
-      groupId: '{{env.PROJECT_GROUP_ID}}'
+      groupId: 'io.github.eugenprog'
 
 release:
   github:
@@ -27,4 +27,4 @@ deploy:
         stagingRepositories:
           - 'koGenDi/build/staging-deploy'
         url: 'https://central.sonatype.com/api/v1/publisher'
-        namespace: '{{env.PROJECT_GROUP_ID}}'
+        namespace: 'io.github.eugenprog'
