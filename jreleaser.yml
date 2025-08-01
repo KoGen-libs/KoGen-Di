@@ -11,7 +11,7 @@ project:
 
 release:
   github:
-    branch: 'master'
+    active: never
 
 # Настройки GPG-подписи
 signing:

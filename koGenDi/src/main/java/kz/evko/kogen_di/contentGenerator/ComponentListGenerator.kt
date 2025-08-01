@@ -66,7 +66,7 @@ class ComponentListGenerator(
             appendLine("class KoGenComponentsFactoryImpl : kz.evko.kogen_di.injector.KoGenComponentsFactory() {")
 
             appendLine("\toverride fun componentsList(): List<kz.evko.kogen_di.injector.KoGenComponents> =")
-            appendLine("\t\tKoGenComponentsImpl.entries")
+            appendLine("\t\t${packageName}.KoGenComponentsImpl.entries")
             appendLine("}")
         }
     }

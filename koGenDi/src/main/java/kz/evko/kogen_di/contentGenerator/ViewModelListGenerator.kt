@@ -51,7 +51,7 @@ class ViewModelListGenerator(
 
             appendLine("class KoGenViewModelScopeImpl : kz.evko.kogen_di.viewModel.KoGenViewModelScope() {")
 
-            appendLine("\toverride fun componentsList(): List<kz.evko.kogen_di.viewModel.KoGenViewModels> = \n\t\tKoGenViewModelsImpl.entries")
+            appendLine("\toverride fun componentsList(): List<kz.evko.kogen_di.viewModel.KoGenViewModels> = \n\t\t${packageName}.KoGenViewModelsImpl.entries")
 
             appendLine("}")
         }

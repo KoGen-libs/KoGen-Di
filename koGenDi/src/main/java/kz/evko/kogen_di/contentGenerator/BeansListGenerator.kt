@@ -62,7 +62,7 @@ class BeansListGenerator(
             beans.forEach {
                 it.returnType?.let { type ->
                     val returnType = type.resolve().declaration
-                    appendLine("\t\t${returnType.getName()}::class.java to KoGenBeansImpl.${returnType.createComponentNames()},")
+                    appendLine("\t\t${returnType.getName()}::class.java to ${packageName}.KoGenBeansImpl.${returnType.createComponentNames()},")
                 }
             }
             appendLine("\t)")
