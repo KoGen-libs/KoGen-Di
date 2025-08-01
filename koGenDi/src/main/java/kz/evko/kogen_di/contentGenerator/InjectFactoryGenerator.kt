@@ -10,6 +10,7 @@ class InjectFactoryGenerator(
             appendLine("inline fun <reified T> inject(): T {")
             appendLine("\tval reference = T::class.java\n")
             appendLine("\tkz.evko.kogen_di.injector.KoGenScope.getScope(")
+            appendLine("\t\tscopeId = \"$packageName\",")
             appendLine("\t\tbeansFactoryClass = ${packageName}.KoGenBeansFactoryImpl::class.java,")
             appendLine("\t\tcomponentsFactoryClass = ${packageName}.KoGenComponentsFactoryImpl::class.java,")
             appendLine("\t).run {")
@@ -22,6 +23,7 @@ class InjectFactoryGenerator(
 
             appendLine("fun setApplicationContext(context: android.content.Context) {")
             appendLine("\tkz.evko.kogen_di.injector.KoGenScope.setApplicationContext(")
+            appendLine("\t\tscopeId = \"$packageName\",")
             appendLine("\t\tcontext = context,")
             appendLine("\t\tbeansFactoryClass = ${packageName}.KoGenBeansFactoryImpl::class.java,")
             appendLine("\t\tcomponentsFactoryClass = ${packageName}.KoGenComponentsFactoryImpl::class.java,")
@@ -40,6 +42,7 @@ class InjectFactoryGenerator(
                 appendLine("\treturn androidx.compose.runtime.currentComposer.run {")
                 appendLine("\t\tandroidx.compose.runtime.remember {")
                 appendLine("\t\t\tval scope = kz.evko.kogen_di.viewModel.KoGenViewModelScope.getInstance(")
+                appendLine("\t\t\t\tscopeId = \"$packageName\",")
                 appendLine("\t\t\t\treference = ${packageName}.KoGenViewModelScopeImpl::class.java,")
                 appendLine("\t\t\t)")
                 appendLine("\t\t\tandroidx.lifecycle.ViewModelProvider(")

@@ -48,6 +48,6 @@ jobs:
       - name: Release with JReleaser
         uses: jreleaser/release-action@v2
         with:
-          arguments: full-release
+          arguments: deploy
         env:
           JRELEASER_PROJECT_VERSION: ${{ steps.get_version.outputs.TAG_VERSION }}

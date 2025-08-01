@@ -1,5 +1,7 @@
 package kz.evko.kogen_di.viewModel
 
+import java.util.concurrent.ConcurrentHashMap
+
 abstract class KoGenViewModelScope {
 
     @Suppress("UNCHECKED_CAST")
@@ -17,13 +19,11 @@ abstract class KoGenViewModelScope {
     abstract fun componentsList(): List<KoGenViewModels>
 
     companion object {
-        private var instance: KoGenViewModelScope? = null
+        private var scopes: MutableMap<String, KoGenViewModelScope> = ConcurrentHashMap()
 
-        fun getInstance(reference: Class<out KoGenViewModelScope>): KoGenViewModelScope {
-            return instance ?: synchronized(this) {
-                instance ?: reference.getConstructor().newInstance().also {
-                    instance = it
-                }
+        fun getInstance(scopeId: String, reference: Class<out KoGenViewModelScope>): KoGenViewModelScope {
+            return scopes.getOrPut(scopeId) {
+                reference.getConstructor().newInstance()
             }
         }
     }
