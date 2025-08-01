@@ -9,10 +9,6 @@ project:
     java:
       groupId: 'io.github.eugenprog'
 
-release:
-  github:
-    active: never
-
 # Настройки GPG-подписи
 signing:
   active: ALWAYS
