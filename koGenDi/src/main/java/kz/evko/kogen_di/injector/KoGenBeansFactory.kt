@@ -1,5 +1,7 @@
 package kz.evko.kogen_di.injector
 
+import java.util.concurrent.ConcurrentHashMap
+
 abstract class KoGenBeansFactory {
     private val singleBeans: MutableMap<KoGenBeans, Any> = mutableMapOf()
     private var beansList: Map<Class<*>, KoGenBeans> = mapOf()
@@ -26,13 +28,11 @@ abstract class KoGenBeansFactory {
     abstract fun createBeansList(): Map<Class<*>, KoGenBeans>
 
     companion object {
-        private var instance: KoGenBeansFactory? = null
+        private var factories: MutableMap<String, KoGenBeansFactory> = ConcurrentHashMap()
 
         fun getInstance(reference: Class<out KoGenBeansFactory>): KoGenBeansFactory {
-            return instance ?: synchronized(this) {
-                instance ?: reference.getConstructor().newInstance().also {
-                    instance = it
-                }
+            return factories.getOrPut(reference.name) {
+                reference.getConstructor().newInstance()
             }
         }
     }
