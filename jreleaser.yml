@@ -1,0 +1,30 @@
+project:
+  name: KoGenDi
+  description: A dependency injection library for Kotlin
+  authors:
+    - Eugen Kopp
+  license: Apache-2.0
+  inceptionYear: '2025'
+  languages:
+    java:
+      groupId: 'io.github.eugenprog'
+
+release:
+  github:
+    branch: 'master'
+
+# Настройки GPG-подписи
+signing:
+  active: ALWAYS
+  armored: true
+
+# Настройки загрузки в Maven Central
+deploy:
+  maven:
+    mavenCentral:
+      sonatype:
+        active: 'ALWAYS'
+        stagingRepositories:
+          - 'koGenDi/build/staging-deploy'
+        url: 'https://central.sonatype.com/api/v1/publisher'
+        namespace: 'io.github.eugenprog'
