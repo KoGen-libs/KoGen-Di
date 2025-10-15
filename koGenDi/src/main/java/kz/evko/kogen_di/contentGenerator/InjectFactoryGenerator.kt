@@ -3,7 +3,7 @@ package kz.evko.kogen_di.contentGenerator
 class InjectFactoryGenerator(
     private val packageName: String,
 ) {
-    fun generateInjectors(includeViewModelInjector: Boolean): String {
+    fun generateInjectors(includeViewModelInjector: Boolean, includeFragmentInjector: Boolean): String {
         return buildString {
             appendLine("package $packageName\n")
 
@@ -59,7 +59,34 @@ class InjectFactoryGenerator(
                 appendLine("\toverride fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {")
                 appendLine("\t\treturn scope.getViewModel(modelClass) as T")
                 appendLine("\t}")
-                appendLine("}")
+                appendLine("}\n")
+            }
+
+            if (includeFragmentInjector) {
+                appendLine("inline fun <reified T : androidx.lifecycle.ViewModel> androidx.fragment.app.Fragment.koGenViewModel(")
+                appendLine("\tnoinline extrasProducer: (() -> androidx.lifecycle.viewmodel.CreationExtras)? = null,")
+                appendLine("\tnoinline ownerProducer: () -> androidx.lifecycle.ViewModelStoreOwner = { this }")
+                appendLine("): kotlin.properties.ReadOnlyProperty<androidx.fragment.app.Fragment, T> {")
+                appendLine("\treturn lazy(LazyThreadSafetyMode.NONE) {")
+                appendLine("\t\tval scope = kz.evko.kogen_di.viewModel.KoGenViewModelScope.getInstance(")
+                appendLine("\t\t\tscopeId = \"$packageName\",")
+                appendLine("\t\t\treference = ${packageName}.KoGenViewModelScopeImpl::class.java,")
+                appendLine("\t\t)")
+                appendLine("\t\tandroidx.lifecycle.ViewModelProvider(")
+                appendLine("\t\t\towner = ownerProducer(),")
+                appendLine("\t\t\tfactory = ${packageName}.KoGenViewModelFactory(scope),")
+                appendLine("\t\t)[T::class.java]")
+                appendLine("\t}.let { lazyViewModel ->")
+                appendLine("\t\tobject : kotlin.properties.ReadOnlyProperty<androidx.fragment.app.Fragment, T> {")
+                appendLine("\t\t\toverride fun getValue(")
+                appendLine("\t\t\t\tthisRef: androidx.fragment.app.Fragment,")
+                appendLine("\t\t\t\tproperty: kotlin.reflect.KProperty<*>,")
+                appendLine("\t\t\t): T {")
+                appendLine("\t\t\t\treturn lazyViewModel.value")
+                appendLine("\t\t\t}")
+                appendLine("\t\t}")
+                appendLine("\t}")
+                appendLine("}\n")
             }
         }
     }

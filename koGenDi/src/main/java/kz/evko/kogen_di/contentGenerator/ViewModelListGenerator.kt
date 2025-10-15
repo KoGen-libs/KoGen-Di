@@ -1,6 +1,5 @@
 package kz.evko.kogen_di.contentGenerator
 
-import com.google.devtools.ksp.getDeclaredProperties
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 

@@ -9,6 +9,7 @@ jetbrainsKotlinJvm = "1.9.0"
 symbolProcessingApi = "2.1.0-1.0.29"
 viewmodelAndroid = "2.8.7"
 jreleaser = "1.14.0"
+fragmentKtx = "1.8.9"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -22,6 +23,7 @@ androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-toolin
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 symbol-processing = { module = "com.google.devtools.ksp:symbol-processing-api", version.ref = "symbolProcessingApi" }
 androidx-viewmodel-android = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose-android", version.ref = "viewmodelAndroid" }
+androidx-fragment-ktx = { group = "androidx.fragment", name = "fragment-ktx", version.ref = "fragmentKtx" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

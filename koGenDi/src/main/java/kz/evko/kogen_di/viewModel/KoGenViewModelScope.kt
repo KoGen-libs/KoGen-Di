@@ -1,5 +1,7 @@
 package kz.evko.kogen_di.viewModel
 
+import kz.evko.kogen_di.exceptions.ComponentNotFoundException
+import kz.evko.kogen_di.exceptions.ViewModelNotRegisteredException
 import java.util.concurrent.ConcurrentHashMap
 
 abstract class KoGenViewModelScope {
@@ -13,7 +15,7 @@ abstract class KoGenViewModelScope {
     private fun findComponentByName(name: String): KoGenViewModels? {
         return componentsList().firstOrNull {
             it.fullName == name
-        }
+        } ?: throw ViewModelNotRegisteredException(name)
     }
 
     abstract fun componentsList(): List<KoGenViewModels>

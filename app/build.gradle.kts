@@ -54,6 +54,7 @@ android {
 ksp {
     arg("packageName", "kz.evko.kogen")
     arg("includeViewModelInjector", "true")
+    arg("includeFragmentInjector", "true")
 }
 
 dependencies {
@@ -67,6 +68,7 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.viewmodel.android)
+    implementation(libs.androidx.fragment.ktx)
 
     debugImplementation(libs.androidx.ui.tooling)
 
