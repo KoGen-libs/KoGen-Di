@@ -10,11 +10,19 @@ class DependencyValidator(
     private val externalProviders = setOf("android.content.Context")
     private var validationFailed = false
 
+    private val ignoredAmbiguityTypes = setOf(
+        "androidx.lifecycle.ViewModel",
+        "java.io.Serializable",
+        "kotlin.Any"
+    )
+
     init {
         val mutableProviderMap = mutableMapOf<String, ProviderNode>()
 
         allProviders.forEach { node ->
             node.satisfiableTypes.forEach { type ->
+                if (type in ignoredAmbiguityTypes) return@forEach
+
                 if (mutableProviderMap.containsKey(type)) {
                     val existingNode = mutableProviderMap[type]
                     logger.error(

@@ -1,7 +1,9 @@
 package kz.evko.kogen_di
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Column
@@ -28,15 +30,19 @@ import kz.evko.kogen_di.ui.theme.KoGenDITheme
 import java.util.UUID
 
 class MainActivity : ComponentActivity() {
+    val viewModel: MainViewModel by koGenViewModel()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setApplicationContext(applicationContext)
+
         setContent {
             KoGenDITheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Greeting(
-                        modifier = Modifier.padding(innerPadding)
+                        modifier = Modifier.padding(innerPadding),
+                        viewModel = viewModel,
                     )
                 }
             }
@@ -67,8 +73,10 @@ data class MainState(
 @Composable
 fun Greeting(
     modifier: Modifier = Modifier,
-    viewModel: MainViewModel = koGenViewModel(),
+    viewModel: MainViewModel// = koGenViewModel(),
 ) {
+    val activity = LocalActivity.current
+
     val state by viewModel.state.collectAsState()
     Column(
         modifier = modifier,
@@ -86,6 +94,15 @@ fun Greeting(
                 viewModel.getName("Oh no, the scope workes: \n${UUID.randomUUID()}")
             }) {
             Text(text = "Update Name")
+        }
+
+        Button(modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+            onClick = {
+                activity?.startActivity(Intent(activity, SecondActivity::class.java))
+            }) {
+            Text("Next")
         }
     }
 }

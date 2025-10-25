@@ -69,6 +69,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.viewmodel.android)
     implementation(libs.androidx.fragment.ktx)
+    implementation(libs.androidx.navigation)
 
     debugImplementation(libs.androidx.ui.tooling)
 
