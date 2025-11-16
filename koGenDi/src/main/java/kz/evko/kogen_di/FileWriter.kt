@@ -30,7 +30,7 @@ internal class FileWriter(
 
     fun createBeansList(beans: List<KSFunctionDeclaration>) {
         try {
-            logger.warn("Creating beans list")
+            logger.info("Creating beans list")
 
             val generator = BeansListGenerator(logger, packageName)
             val listContent = generator.generateBeansList(beans)
@@ -46,14 +46,14 @@ internal class FileWriter(
             factoryFile += factoryContent
             factoryFile.close()
         } catch (e: Exception) {
-            logger.warn("Exception: ${e.message}")
+            logger.info("Exception: ${e.message}")
         }
     }
 
     fun createComponentList(components: List<KSClassDeclaration>) {
         try {
-            logger.warn("Creating component list")
-            logger.warn("Components count: ${components.size}")
+            logger.info("Creating component list")
+            logger.info("Components count: ${components.size}")
 
             val generator = ComponentListGenerator(logger, packageName)
             val content = generator.generateComponentList(components)
@@ -69,14 +69,14 @@ internal class FileWriter(
             factoryFile += factoryContent
             factoryFile.close()
         } catch (e: Exception) {
-            logger.warn("Exception: ${e.message}")
+            logger.info("Exception: ${e.message}")
         }
     }
 
     fun createViewModelList(viewModels: List<KSClassDeclaration>) {
         try {
-            logger.warn("Creating view model list")
-            logger.warn("View models count: ${viewModels.size}")
+            logger.info("Creating view model list")
+            logger.info("View models count: ${viewModels.size}")
 
             val generator = ViewModelListGenerator(logger, packageName)
             val content = generator.generateViewModelList(viewModels)
@@ -92,13 +92,13 @@ internal class FileWriter(
             factoryFile += factoryContent
             factoryFile.close()
         } catch (e: Exception) {
-            logger.warn("Exception: ${e.message}")
+            logger.info("Exception: ${e.message}")
         }
     }
 
     fun createInjectFactory(includeViewModelInjector: Boolean, includeFragmentInjector: Boolean) {
         try {
-            logger.warn("Creating component factory")
+            logger.info("Creating component factory")
 
             val generator = InjectFactoryGenerator(packageName)
             val content = generator.generateInjectors(
@@ -111,7 +111,7 @@ internal class FileWriter(
             file += content
             file.close()
         } catch (e: Exception) {
-            logger.warn("Exception: ${e.message}")
+            logger.info("Exception: ${e.message}")
         }
     }
 
