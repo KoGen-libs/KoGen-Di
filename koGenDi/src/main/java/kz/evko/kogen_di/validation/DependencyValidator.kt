@@ -55,51 +55,5 @@ class DependencyValidator(
         }
 
         if (validationFailed) return
-
-        val visited = mutableSetOf<String>()
-        val recursionStack = mutableSetOf<String>()
-
-        providerMap.values.distinct().forEach { node ->
-            if (hasCycle(node.concreteType, visited, recursionStack)) {
-                validationFailed = true
-                return@forEach
-            }
-        }
-    }
-
-    private fun hasCycle(
-        concreteType: String,
-        visited: MutableSet<String>,
-        recursionStack: MutableSet<String>
-    ): Boolean {
-        if (concreteType in recursionStack) {
-            logger.error(
-                "Circular dependency detected: ... -> $concreteType",
-                providerMap[concreteType]?.sourceElement
-            )
-            return true
-        }
-        if (concreteType in visited) return false
-
-        recursionStack.add(concreteType)
-
-        val node = providerMap[concreteType] ?: return false
-
-        node.requiredDependencies.forEach { dependencyType ->
-            val dependencyNode = providerMap[dependencyType]
-            if (dependencyNode != null && hasCycle(
-                    dependencyNode.concreteType,
-                    visited,
-                    recursionStack
-                )
-            ) {
-                logger.error("    ... which is required by '$concreteType'", node.sourceElement)
-                return true
-            }
-        }
-
-        visited.add(concreteType)
-        recursionStack.remove(concreteType)
-        return false
     }
 }
