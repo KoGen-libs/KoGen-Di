@@ -74,10 +74,11 @@ publishing {
     }
 }
 
-signing {
-    val signingKey = System.getenv("JRELEASER_GPG_SECRET_KEY")
-    val signingPassword = System.getenv("JRELEASER_GPG_PASSPHRASE")
-    useInMemoryPgpKeys(signingKey, signingPassword)
-
-    sign(publishing.publications["release"])
+val signingKey: String? = System.getenv("JRELEASER_GPG_SECRET_KEY")
+val signingPassword: String? = System.getenv("JRELEASER_GPG_PASSPHRASE")
+if (!signingKey.isNullOrBlank() && !signingPassword.isNullOrBlank()) {
+    signing {
+        useInMemoryPgpKeys(signingKey, signingPassword)
+        sign(publishing.publications["release"])
+    }
 }

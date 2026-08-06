@@ -26,6 +26,8 @@ sourceSets.main {
 dependencies {
     implementation(project(":koGenDi"))
     implementation(libs.symbol.processing)
+    implementation(libs.kotlinpoet)
+    implementation(libs.kotlinpoet.ksp)
 
     constraints {
         implementation("org.apache.commons:commons-compress:1.26.2") {
@@ -77,10 +79,11 @@ publishing {
     }
 }
 
-signing {
-    val signingKey = System.getenv("JRELEASER_GPG_SECRET_KEY")
-    val signingPassword = System.getenv("JRELEASER_GPG_PASSPHRASE")
-    useInMemoryPgpKeys(signingKey, signingPassword)
-
-    sign(publishing.publications["release"])
+val signingKey: String? = System.getenv("JRELEASER_GPG_SECRET_KEY")
+val signingPassword: String? = System.getenv("JRELEASER_GPG_PASSPHRASE")
+if (!signingKey.isNullOrBlank() && !signingPassword.isNullOrBlank()) {
+    signing {
+        useInMemoryPgpKeys(signingKey, signingPassword)
+        sign(publishing.publications["release"])
+    }
 }

@@ -7,11 +7,11 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSDeclaration
 import com.google.devtools.ksp.symbol.KSFile
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
+import com.squareup.kotlinpoet.ksp.writeTo
 import kz.evko.kogen_di.contentGenerator.BeansListGenerator
 import kz.evko.kogen_di.contentGenerator.ComponentListGenerator
 import kz.evko.kogen_di.contentGenerator.InjectFactoryGenerator
 import kz.evko.kogen_di.contentGenerator.ViewModelListGenerator
-import java.io.OutputStream
 
 internal class FileWriter(
     private val logger: KSPLogger,
@@ -33,18 +33,10 @@ internal class FileWriter(
             logger.info("Creating beans list")
 
             val generator = BeansListGenerator(logger, packageName)
-            val listContent = generator.generateBeansList(beans)
+            val dependencies = Dependencies(true, *beans.toFileList().toTypedArray())
 
-            val file: OutputStream =
-                createFile(beans.toFileList(), "KoGenBeansImpl")
-            file += listContent
-            file.close()
-
-            val factoryContent = generator.generateBeansFactory(beans)
-            val factoryFile: OutputStream =
-                createFile(beans.toFileList(), "KoGenBeansFactoryImpl")
-            factoryFile += factoryContent
-            factoryFile.close()
+            generator.generateBeansList(beans).writeTo(codeGenerator, dependencies)
+            generator.generateBeansFactory(beans).writeTo(codeGenerator, dependencies)
         } catch (e: Exception) {
             logger.info("Exception: ${e.message}")
         }
@@ -56,18 +48,10 @@ internal class FileWriter(
             logger.info("Components count: ${components.size}")
 
             val generator = ComponentListGenerator(logger, packageName)
-            val content = generator.generateComponentList(components)
+            val dependencies = Dependencies(true, *components.toFileList().toTypedArray())
 
-            val file: OutputStream =
-                createFile(components.toFileList(), "KoGenComponentsImpl")
-            file += content
-            file.close()
-
-            val factoryContent = generator.createComponentFactory()
-            val factoryFile: OutputStream =
-                createFile(components.toFileList(), "KoGenComponentsFactoryImpl")
-            factoryFile += factoryContent
-            factoryFile.close()
+            generator.generateComponentList(components).writeTo(codeGenerator, dependencies)
+            generator.createComponentFactory().writeTo(codeGenerator, dependencies)
         } catch (e: Exception) {
             logger.info("Exception: ${e.message}")
         }
@@ -79,18 +63,10 @@ internal class FileWriter(
             logger.info("View models count: ${viewModels.size}")
 
             val generator = ViewModelListGenerator(logger, packageName)
-            val content = generator.generateViewModelList(viewModels)
+            val dependencies = Dependencies(true, *viewModels.toFileList().toTypedArray())
 
-            val file: OutputStream =
-                createFile(viewModels.toFileList(), "KoGenViewModelsImpl")
-            file += content
-            file.close()
-
-            val factoryContent = generator.generateViewModelFactory()
-            val factoryFile: OutputStream =
-                createFile(viewModels.toFileList(), "KoGenViewModelScopeImpl")
-            factoryFile += factoryContent
-            factoryFile.close()
+            generator.generateViewModelList(viewModels).writeTo(codeGenerator, dependencies)
+            generator.generateViewModelFactory().writeTo(codeGenerator, dependencies)
         } catch (e: Exception) {
             logger.info("Exception: ${e.message}")
         }
@@ -101,35 +77,14 @@ internal class FileWriter(
             logger.info("Creating component factory")
 
             val generator = InjectFactoryGenerator(packageName)
-            val content = generator.generateInjectors(
+            generator.generateInjectors(
                 includeViewModelInjector = includeViewModelInjector,
                 includeFragmentInjector = includeFragmentInjector,
-            )
-
-            val file: OutputStream =
-                createFile(emptyList(), "KoGenInjectors")
-            file += content
-            file.close()
+            ).writeTo(codeGenerator, Dependencies(true))
         } catch (e: Exception) {
             logger.info("Exception: ${e.message}")
         }
     }
-
-    private fun createFile(
-        files: List<KSFile>,
-        fileName: String,
-    ) = codeGenerator.createNewFile(
-        Dependencies(
-            true,
-            *files.toList().toTypedArray(),
-        ),
-        packageName,
-        fileName
-    )
-}
-
-internal operator fun OutputStream.plusAssign(text: String) {
-    write(text.toByteArray())
 }
 
 internal fun List<KSDeclaration>.toFileList(): List<KSFile> =
