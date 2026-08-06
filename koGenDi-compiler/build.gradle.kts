@@ -34,6 +34,9 @@ dependencies {
             because("JReleaser requires this version to avoid a conflict")
         }
     }
+
+    testImplementation(libs.junit)
+    testImplementation(libs.mockito.core)
 }
 
 publishing {
@@ -86,4 +89,11 @@ if (!signingKey.isNullOrBlank() && !signingPassword.isNullOrBlank()) {
         useInMemoryPgpKeys(signingKey, signingPassword)
         sign(publishing.publications["release"])
     }
+}
+
+tasks.withType<PublishToMavenRepository>().configureEach {
+    dependsOn(tasks.test)
+}
+tasks.withType<PublishToMavenLocal>().configureEach {
+    dependsOn(tasks.test)
 }

@@ -13,6 +13,7 @@ fragmentKtx = "1.8.9"
 navigation = "2.9.5"
 junit = "4.13.2"
 kotlinpoet = "1.18.1"
+mockito = "5.14.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -31,6 +32,7 @@ androidx-navigation = { group = "androidx.navigation", name = "navigation-compos
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 kotlinpoet = { group = "com.squareup", name = "kotlinpoet", version.ref = "kotlinpoet" }
 kotlinpoet-ksp = { group = "com.squareup", name = "kotlinpoet-ksp", version.ref = "kotlinpoet" }
+mockito-core = { group = "org.mockito", name = "mockito-core", version.ref = "mockito" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

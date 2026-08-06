@@ -82,3 +82,10 @@ if (!signingKey.isNullOrBlank() && !signingPassword.isNullOrBlank()) {
         sign(publishing.publications["release"])
     }
 }
+
+tasks.withType<PublishToMavenRepository>().configureEach {
+    dependsOn(tasks.test)
+}
+tasks.withType<PublishToMavenLocal>().configureEach {
+    dependsOn(tasks.test)
+}
