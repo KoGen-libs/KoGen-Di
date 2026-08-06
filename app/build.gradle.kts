@@ -74,5 +74,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
 
     implementation(project(":koGenDi"))
-    ksp(project(":koGenDi"))
+    ksp(project(":koGenDi-compiler"))
+
+    testImplementation(libs.junit)
 }

@@ -11,6 +11,7 @@ viewmodelAndroid = "2.9.4"
 jreleaser = "1.14.0"
 fragmentKtx = "1.8.9"
 navigation = "2.9.5"
+junit = "4.13.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -26,6 +27,7 @@ symbol-processing = { module = "com.google.devtools.ksp:symbol-processing-api", 
 androidx-viewmodel-android = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose-android", version.ref = "viewmodelAndroid" }
 androidx-fragment-ktx = { group = "androidx.fragment", name = "fragment-ktx", version.ref = "fragmentKtx" }
 androidx-navigation = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

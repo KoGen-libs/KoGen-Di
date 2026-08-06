@@ -24,6 +24,9 @@ sourceSets.main {
 }
 
 dependencies {
+    implementation(project(":koGenDi"))
+    implementation(libs.symbol.processing)
+
     constraints {
         implementation("org.apache.commons:commons-compress:1.26.2") {
             because("JReleaser requires this version to avoid a conflict")
@@ -37,11 +40,11 @@ publishing {
             from(components["java"])
 
             groupId = properties["GROUP"].toString()
-            artifactId = "android-di"
+            artifactId = "android-di-compiler"
 
             pom {
-                name.set("KoGen DI")
-                description.set("The best DI for Android)")
+                name.set("KoGen DI Compiler")
+                description.set("KSP annotation processor for KoGen DI")
                 url.set("https://github.com/EugenProg/KoGen-DI_demo")
 
                 licenses {

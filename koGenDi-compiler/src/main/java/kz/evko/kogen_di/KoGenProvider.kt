@@ -121,7 +121,7 @@ internal class KoGenProcessor(
                         requiredDependencies = functionDeclaration.parameters.map { param ->
                             param.type.resolve().declaration.qualifiedName?.asString() ?: ""
                         },
-                        satisfiableTypes = listOf(),
+                        satisfiableTypes = listOf(name.asString()),
                         sourceElement = functionDeclaration,
                     )
                 )
