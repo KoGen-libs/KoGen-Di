@@ -12,7 +12,8 @@ project:
 # Настройки GPG-подписи
 signing:
   active: ALWAYS
-  armored: true
+  pgp:
+    armored: true
 
 # Настройки загрузки в Maven Central
 deploy:
@@ -26,3 +27,8 @@ deploy:
           - 'koGenDi-compiler/build/staging-deploy'
         url: 'https://central.sonatype.com/api/v1/publisher'
         namespace: 'io.github.eugenprog'
+        # PomChecker (внутренняя проверка JReleaser) не понимает packaging=aar
+        # у Android-библиотек и падает на этапе валидации. Центральный портал
+        # Sonatype это принимает нормально, поэтому отключаем локальную проверку.
+        # https://github.com/jreleaser/jreleaser.github.io/issues/85
+        verifyPom: false
