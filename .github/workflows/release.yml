@@ -43,7 +43,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
 
       - name: Build and create artifacts
-        run: ./gradlew :koGenDi:publish -Pversion=${{ steps.get_version.outputs.TAG_VERSION }}
+        run: ./gradlew :koGenDi-common:publish :koGenDi:publish :koGenDi-compiler:publish -Pversion=${{ steps.get_version.outputs.TAG_VERSION }}
 
       - name: Release with JReleaser
         uses: jreleaser/release-action@v2

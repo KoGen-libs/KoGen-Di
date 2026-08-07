@@ -1,7 +1,6 @@
 plugins {
-    id("java-library")
-    alias(libs.plugins.jetbrains.kotlin.jvm)
-    alias(libs.plugins.kspAndroid)
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.jreleaser)
     id("maven-publish")
     id("signing")
@@ -9,78 +8,97 @@ plugins {
 
 group = project.properties["GROUP"].toString()
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
-    withSourcesJar()
-    withJavadocJar()
-}
+android {
+    // AGP resource/BuildConfig namespace only - unrelated to the actual Kotlin package
+    // (kz.evko.kogen_di.injector/viewModel/exceptions). Kept distinct from the demo app's
+    // own namespace (also kz.evko.kogen_di) to avoid an AGP namespace-collision warning.
+    namespace = "kz.evko.kogen_di.runtime"
+    compileSdk = 35
 
-kotlin {
-    jvmToolchain(17)
-}
+    defaultConfig {
+        minSdk = 21
+        consumerProguardFiles("consumer-rules.pro")
+    }
 
-sourceSets.main {
-    java.srcDirs("src/main/kotlin")
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+            withJavadocJar()
+        }
+    }
 }
 
 dependencies {
-    implementation(libs.symbol.processing)
+    api(project(":koGenDi-common"))
 
-    constraints {
-        implementation("org.apache.commons:commons-compress:1.26.2") {
-            because("JReleaser requires this version to avoid a conflict")
-        }
-    }
+    testImplementation(libs.junit)
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("release") {
-            from(components["java"])
+afterEvaluate {
+    publishing {
+        publications {
+            create<MavenPublication>("release") {
+                from(components["release"])
 
-            groupId = properties["GROUP"].toString()
-            artifactId = "android-di"
+                groupId = properties["GROUP"].toString()
+                artifactId = "android-di"
 
-            pom {
-                name.set("KoGen DI")
-                description.set("The best DI for Android)")
-                url.set("https://github.com/EugenProg/KoGen-DI_demo")
+                pom {
+                    name.set("KoGen DI")
+                    description.set("The best DI for Android)")
+                    url.set("https://github.com/EugenProg/KoGen-DI_demo")
 
-                licenses {
-                    license {
-                        name.set("The Apache License, Version 2.0")
-                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                    licenses {
+                        license {
+                            name.set("The Apache License, Version 2.0")
+                            url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                        }
                     }
-                }
 
-                developers {
-                    developer {
-                        id.set("EugenProg")
-                        name.set("Eugen Kopp")
-                        email.set("Eugen.kopp.kz@gmail.com")
+                    developers {
+                        developer {
+                            id.set("EugenProg")
+                            name.set("Eugen Kopp")
+                            email.set("Eugen.kopp.kz@gmail.com")
+                        }
                     }
-                }
 
-                scm {
-                    connection.set("scm:git:git://github.com/EugenProg/KoGen-Di.git")
-                    developerConnection.set("scm:git:ssh://github.com:EugenProg/KoGen-Di.git")
-                    url.set("https://github.com/EugenProg/KoGen-Di/tree/master")
+                    scm {
+                        connection.set("scm:git:git://github.com/EugenProg/KoGen-Di.git")
+                        developerConnection.set("scm:git:ssh://github.com:EugenProg/KoGen-Di.git")
+                        url.set("https://github.com/EugenProg/KoGen-Di/tree/master")
+                    }
                 }
             }
         }
-    }
-    repositories {
-        maven {
-            setUrl(layout.buildDirectory.dir("staging-deploy"))
+        repositories {
+            maven {
+                setUrl(layout.buildDirectory.dir("staging-deploy"))
+            }
         }
     }
-}
 
-signing {
-    val signingKey = System.getenv("JRELEASER_GPG_SECRET_KEY")
-    val signingPassword = System.getenv("JRELEASER_GPG_PASSPHRASE")
-    useInMemoryPgpKeys(signingKey, signingPassword)
+    val signingKey: String? = System.getenv("JRELEASER_GPG_SECRET_KEY")
+    val signingPassword: String? = System.getenv("JRELEASER_GPG_PASSPHRASE")
+    if (!signingKey.isNullOrBlank() && !signingPassword.isNullOrBlank()) {
+        signing {
+            useInMemoryPgpKeys(signingKey, signingPassword)
+            sign(publishing.publications["release"])
+        }
+    }
 
-    sign(publishing.publications["release"])
+    tasks.withType<PublishToMavenRepository>().configureEach {
+        dependsOn(tasks.named("test"))
+    }
+    tasks.withType<PublishToMavenLocal>().configureEach {
+        dependsOn(tasks.named("test"))
+    }
 }

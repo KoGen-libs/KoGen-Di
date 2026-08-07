@@ -21,4 +21,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "KoGen DI"
 include(":app")
+include(":koGenDi-common")
 include(":koGenDi")
+include(":koGenDi-compiler")

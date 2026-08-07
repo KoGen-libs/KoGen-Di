@@ -28,7 +28,16 @@ internal class KoGenProcessor(
     private val args: Map<String, String>,
     private val fileWriter: FileWriter,
 ) : SymbolProcessor {
+    // KSP always runs at least one extra round after a round that generates new files, to
+    // check whether the newly generated code itself contains annotations worth processing.
+    // Ours never do, so rounds after the first always see the exact same annotated
+    // declarations and would try to create the exact same output files again, crashing with
+    // FileAlreadyExistsException. Codegen only ever needs to run once.
+    private var hasGenerated = false
+
     override fun process(resolver: Resolver): List<KSAnnotated> {
+        if (hasGenerated) return emptyList()
+
         val componentClasses: Sequence<KSClassDeclaration> =
             resolver.findAnnotations(KoGenComponent::class)
                 .filterIsInstance<KSClassDeclaration>()
@@ -56,6 +65,7 @@ internal class KoGenProcessor(
             includeViewModelInjector = args["includeViewModelInjector"] == "true",
             includeFragmentInjector = args["includeFragmentInjector"] == "true",
         )
+        hasGenerated = true
 
         if (!componentClasses.iterator().hasNext() &&
             !beanFunctions.iterator().hasNext() &&
@@ -121,7 +131,7 @@ internal class KoGenProcessor(
                         requiredDependencies = functionDeclaration.parameters.map { param ->
                             param.type.resolve().declaration.qualifiedName?.asString() ?: ""
                         },
-                        satisfiableTypes = listOf(),
+                        satisfiableTypes = listOf(name.asString()),
                         sourceElement = functionDeclaration,
                     )
                 )

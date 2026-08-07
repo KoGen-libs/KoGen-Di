@@ -6,12 +6,14 @@
       <GradleProjectSettings>
         <option name="testRunner" value="CHOOSE_PER_TEST" />
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
-        <option name="gradleJvm" value="corretto-17" />
+        <option name="gradleJvm" value="jbr-21" />
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/app" />
             <option value="$PROJECT_DIR$/koGenDi" />
+            <option value="$PROJECT_DIR$/koGenDi-common" />
+            <option value="$PROJECT_DIR$/koGenDi-compiler" />
           </set>
         </option>
       </GradleProjectSettings>

@@ -20,9 +20,7 @@ class KoGenScope(
             return beansFactory.getBean(it)
         }
 
-        val componentName = "${reference.`package`?.name}.${reference.simpleName}"
-
-        return componentsFactory.getComponent(componentName) ?: throw ComponentNotFoundException(componentName)
+        return componentsFactory.getComponent(reference) ?: throw ComponentNotFoundException(reference.name)
     }
 
     companion object {
