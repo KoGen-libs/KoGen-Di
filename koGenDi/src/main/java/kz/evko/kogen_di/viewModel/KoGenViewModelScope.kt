@@ -1,24 +1,21 @@
 package kz.evko.kogen_di.viewModel
 
-import kz.evko.kogen_di.exceptions.ComponentNotFoundException
 import kz.evko.kogen_di.exceptions.ViewModelNotRegisteredException
 import java.util.concurrent.ConcurrentHashMap
 
 abstract class KoGenViewModelScope {
+    private var viewModelsByType: Map<Class<*>, KoGenViewModels> = mapOf()
 
     @Suppress("UNCHECKED_CAST")
     fun <T> getViewModel(reference: Class<T>): T? {
-        val componentName = "${reference.`package`?.name}.${reference.simpleName}"
-        return findComponentByName(componentName)?.getComponentObject() as T?
+        if (viewModelsByType.isEmpty()) {
+            viewModelsByType = createViewModelsMap()
+        }
+        val viewModel = viewModelsByType[reference] ?: throw ViewModelNotRegisteredException(reference.name)
+        return viewModel.getComponentObject() as T?
     }
 
-    private fun findComponentByName(name: String): KoGenViewModels? {
-        return componentsList().firstOrNull {
-            it.fullName == name
-        } ?: throw ViewModelNotRegisteredException(name)
-    }
-
-    abstract fun componentsList(): List<KoGenViewModels>
+    abstract fun createViewModelsMap(): Map<Class<*>, KoGenViewModels>
 
     companion object {
         private var scopes: MutableMap<String, KoGenViewModelScope> = ConcurrentHashMap()
@@ -32,6 +29,5 @@ abstract class KoGenViewModelScope {
 }
 
 interface KoGenViewModels {
-    val fullName: String
     fun getComponentObject(): Any
 }

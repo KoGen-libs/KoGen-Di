@@ -23,35 +23,17 @@ sourceSets.main {
     java.srcDirs("src/main/kotlin")
 }
 
-dependencies {
-    implementation(project(":koGenDi-common"))
-    implementation(libs.symbol.processing)
-    implementation(libs.kotlinpoet)
-    implementation(libs.kotlinpoet.ksp)
-
-    constraints {
-        implementation("org.apache.commons:commons-compress:1.26.2") {
-            because("JReleaser requires this version to avoid a conflict")
-        }
-    }
-
-    testImplementation(libs.junit)
-    testImplementation(libs.mockito.core)
-    testImplementation(libs.kctfork.core)
-    testImplementation(libs.kctfork.ksp)
-}
-
 publishing {
     publications {
         create<MavenPublication>("release") {
             from(components["java"])
 
             groupId = properties["GROUP"].toString()
-            artifactId = "android-di-compiler"
+            artifactId = "android-di-common"
 
             pom {
-                name.set("KoGen DI Compiler")
-                description.set("KSP annotation processor for KoGen DI")
+                name.set("KoGen DI Common")
+                description.set("Shared annotations for KoGen DI")
                 url.set("https://github.com/EugenProg/KoGen-DI_demo")
 
                 licenses {

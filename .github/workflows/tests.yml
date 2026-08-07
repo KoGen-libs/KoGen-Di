@@ -1,0 +1,28 @@
+name: Tests
+
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      # koGenDi/koGenDi-compiler unit tests + the app's ClassicStructureTest,
+      # which exercises the full KSP pipeline (codegen + runtime wiring) end
+      # to end - this is also what would catch a codegen regression that a
+      # pure unit test wouldn't reach.
+      - name: Run tests
+        run: ./gradlew :koGenDi-common:test :koGenDi:test :koGenDi-compiler:test :app:testDebugUnitTest

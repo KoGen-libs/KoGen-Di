@@ -29,61 +29,45 @@ internal class FileWriter(
     }
 
     fun createBeansList(beans: List<KSFunctionDeclaration>) {
-        try {
-            logger.info("Creating beans list")
+        logger.info("Creating beans list")
 
-            val generator = BeansListGenerator(logger, packageName)
-            val dependencies = Dependencies(true, *beans.toFileList().toTypedArray())
+        val generator = BeansListGenerator(logger, packageName)
+        val dependencies = Dependencies(true, *beans.toFileList().toTypedArray())
 
-            generator.generateBeansList(beans).writeTo(codeGenerator, dependencies)
-            generator.generateBeansFactory(beans).writeTo(codeGenerator, dependencies)
-        } catch (e: Exception) {
-            logger.info("Exception: ${e.message}")
-        }
+        generator.generateBeansList(beans).writeTo(codeGenerator, dependencies)
+        generator.generateBeansFactory(beans).writeTo(codeGenerator, dependencies)
     }
 
     fun createComponentList(components: List<KSClassDeclaration>) {
-        try {
-            logger.info("Creating component list")
-            logger.info("Components count: ${components.size}")
+        logger.info("Creating component list")
+        logger.info("Components count: ${components.size}")
 
-            val generator = ComponentListGenerator(logger, packageName)
-            val dependencies = Dependencies(true, *components.toFileList().toTypedArray())
+        val generator = ComponentListGenerator(logger, packageName)
+        val dependencies = Dependencies(true, *components.toFileList().toTypedArray())
 
-            generator.generateComponentList(components).writeTo(codeGenerator, dependencies)
-            generator.createComponentFactory().writeTo(codeGenerator, dependencies)
-        } catch (e: Exception) {
-            logger.info("Exception: ${e.message}")
-        }
+        generator.generateComponentList(components).writeTo(codeGenerator, dependencies)
+        generator.createComponentFactory(components).writeTo(codeGenerator, dependencies)
     }
 
     fun createViewModelList(viewModels: List<KSClassDeclaration>) {
-        try {
-            logger.info("Creating view model list")
-            logger.info("View models count: ${viewModels.size}")
+        logger.info("Creating view model list")
+        logger.info("View models count: ${viewModels.size}")
 
-            val generator = ViewModelListGenerator(logger, packageName)
-            val dependencies = Dependencies(true, *viewModels.toFileList().toTypedArray())
+        val generator = ViewModelListGenerator(logger, packageName)
+        val dependencies = Dependencies(true, *viewModels.toFileList().toTypedArray())
 
-            generator.generateViewModelList(viewModels).writeTo(codeGenerator, dependencies)
-            generator.generateViewModelFactory().writeTo(codeGenerator, dependencies)
-        } catch (e: Exception) {
-            logger.info("Exception: ${e.message}")
-        }
+        generator.generateViewModelList(viewModels).writeTo(codeGenerator, dependencies)
+        generator.generateViewModelFactory(viewModels).writeTo(codeGenerator, dependencies)
     }
 
     fun createInjectFactory(includeViewModelInjector: Boolean, includeFragmentInjector: Boolean) {
-        try {
-            logger.info("Creating component factory")
+        logger.info("Creating component factory")
 
-            val generator = InjectFactoryGenerator(packageName)
-            generator.generateInjectors(
-                includeViewModelInjector = includeViewModelInjector,
-                includeFragmentInjector = includeFragmentInjector,
-            ).writeTo(codeGenerator, Dependencies(true))
-        } catch (e: Exception) {
-            logger.info("Exception: ${e.message}")
-        }
+        val generator = InjectFactoryGenerator(packageName)
+        generator.generateInjectors(
+            includeViewModelInjector = includeViewModelInjector,
+            includeFragmentInjector = includeFragmentInjector,
+        ).writeTo(codeGenerator, Dependencies(true))
     }
 }
 

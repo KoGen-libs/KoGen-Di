@@ -14,6 +14,7 @@ navigation = "2.9.5"
 junit = "4.13.2"
 kotlinpoet = "1.18.1"
 mockito = "5.14.2"
+kctfork = "0.7.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -33,9 +34,12 @@ junit = { group = "junit", name = "junit", version.ref = "junit" }
 kotlinpoet = { group = "com.squareup", name = "kotlinpoet", version.ref = "kotlinpoet" }
 kotlinpoet-ksp = { group = "com.squareup", name = "kotlinpoet-ksp", version.ref = "kotlinpoet" }
 mockito-core = { group = "org.mockito", name = "mockito-core", version.ref = "mockito" }
+kctfork-core = { group = "dev.zacsweers.kctfork", name = "core", version.ref = "kctfork" }
+kctfork-ksp = { group = "dev.zacsweers.kctfork", name = "ksp", version.ref = "kctfork" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "jetbrainsKotlinJvm" }

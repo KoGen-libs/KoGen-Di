@@ -4,19 +4,16 @@ import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSDeclaration
 import com.squareup.kotlinpoet.ANY
-import com.squareup.kotlinpoet.ARRAY
 import com.squareup.kotlinpoet.BOOLEAN
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
-import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
-import com.squareup.kotlinpoet.STRING
+import com.squareup.kotlinpoet.STAR
 import com.squareup.kotlinpoet.TypeSpec
-import com.squareup.kotlinpoet.WildcardTypeName
 import kz.evko.kogen_di.annotations.KoGenComponent
 import kotlin.reflect.KClass
 
@@ -26,7 +23,7 @@ class ComponentListGenerator(
 ) {
     private val koGenComponentsInterface = ClassName("kz.evko.kogen_di.injector", "KoGenComponents")
     private val koGenComponentsFactoryClass = ClassName("kz.evko.kogen_di.injector", "KoGenComponentsFactory")
-    private val stringArrayOut = ARRAY.parameterizedBy(WildcardTypeName.producerOf(STRING))
+    private val classOfStar = ClassName("java.lang", "Class").parameterizedBy(STAR)
 
     fun generateComponentList(components: List<KSClassDeclaration>): FileSpec {
         val enumBuilder = TypeSpec.enumBuilder("KoGenComponentsImpl")
@@ -34,11 +31,6 @@ class ComponentListGenerator(
             .primaryConstructor(
                 FunSpec.constructorBuilder()
                     .addParameter("singleton", BOOLEAN)
-                    .addParameter(
-                        ParameterSpec.builder("componentType", STRING)
-                            .addModifiers(KModifier.VARARG)
-                            .build()
-                    )
                     .build()
             )
             .addProperty(
@@ -47,25 +39,13 @@ class ComponentListGenerator(
                     .initializer("singleton")
                     .build()
             )
-            .addProperty(
-                PropertySpec.builder("componentType", stringArrayOut)
-                    .addModifiers(KModifier.OVERRIDE)
-                    .initializer("componentType")
-                    .build()
-            )
 
         components.forEach { component ->
-            val enumName = component.createComponentNames()
             val isSingleton = component.findSingletonParam(KoGenComponent::class)
-            val names = component.satisfiableNames()
-
-            val format = "%L" + names.joinToString("") { ", %S" }
-            val args = mutableListOf<Any>(isSingleton).apply { addAll(names) }
-
             enumBuilder.addEnumConstant(
-                enumName,
+                component.createComponentNames(),
                 TypeSpec.anonymousClassBuilder()
-                    .addSuperclassConstructorParameter(format, *args.toTypedArray())
+                    .addSuperclassConstructorParameter("%L", isSingleton)
                     .build()
             )
         }
@@ -110,20 +90,34 @@ class ComponentListGenerator(
             .build()
     }
 
-    fun createComponentFactory(): FileSpec {
+    fun createComponentFactory(components: List<KSClassDeclaration>): FileSpec {
         val koGenComponentsImplClass = ClassName(packageName, "KoGenComponentsImpl")
-        val listOfComponents = ClassName("kotlin.collections", "List")
-            .parameterizedBy(koGenComponentsInterface)
+        val mapType = ClassName("kotlin.collections", "Map")
+            .parameterizedBy(classOfStar, koGenComponentsInterface)
 
-        val componentsListFun = FunSpec.builder("componentsList")
+        val mapBody = CodeBlock.builder().add("mapOf(\n").indent()
+        components.forEach { component ->
+            val enumName = component.createComponentNames()
+            component.satisfiableClassNames().forEach { satisfiableClass ->
+                mapBody.addStatement(
+                    "%T::class.java to %T.%N,",
+                    satisfiableClass,
+                    koGenComponentsImplClass,
+                    enumName,
+                )
+            }
+        }
+        mapBody.unindent().add(")")
+
+        val createComponentsMapFun = FunSpec.builder("createComponentsMap")
             .addModifiers(KModifier.OVERRIDE)
-            .returns(listOfComponents)
-            .addStatement("return %T.entries", koGenComponentsImplClass)
+            .returns(mapType)
+            .addStatement("return %L", mapBody.build())
             .build()
 
         val classSpec = TypeSpec.classBuilder("KoGenComponentsFactoryImpl")
             .superclass(koGenComponentsFactoryClass)
-            .addFunction(componentsListFun)
+            .addFunction(createComponentsMapFun)
             .build()
 
         return FileSpec.builder(packageName, "KoGenComponentsFactoryImpl")
@@ -131,17 +125,31 @@ class ComponentListGenerator(
             .build()
     }
 
-    private fun KSClassDeclaration.satisfiableNames(): List<String> {
-        val names = mutableListOf(getName())
+    // Рекурсивно, а не только прямые supertype - должно совпадать с тем, что считает
+    // "удовлетворяемым" DependencyValidator (KoGenProvider.getSuperTypes()), иначе
+    // возможна ситуация "валидация прошла, а inject<T>() всё равно не находит компонент".
+    private fun KSClassDeclaration.satisfiableClassNames(): List<ClassName> {
+        val result = linkedSetOf(ClassName(packageName.asString(), simpleName.asString()))
 
-        superTypes.forEach {
-            val name = it.resolve().declaration.getName()
-            if (name != "kotlin.Any") {
-                names.add(name)
+        fun collect(declaration: KSClassDeclaration) {
+            declaration.superTypes.forEach { typeReference ->
+                val superDeclaration = typeReference.resolve().declaration as? KSClassDeclaration
+                    ?: return@forEach
+                val qualifiedName = superDeclaration.qualifiedName?.asString() ?: return@forEach
+                if (qualifiedName == "kotlin.Any") return@forEach
+
+                val className = ClassName(
+                    superDeclaration.packageName.asString(),
+                    superDeclaration.simpleName.asString(),
+                )
+                if (result.add(className)) {
+                    collect(superDeclaration)
+                }
             }
         }
+        collect(this)
 
-        return names
+        return result.toList()
     }
 }
 

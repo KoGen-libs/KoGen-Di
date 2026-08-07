@@ -4,9 +4,13 @@ import java.util.concurrent.ConcurrentHashMap
 
 abstract class KoGenComponentsFactory {
     private val singleComponents: MutableMap<KoGenComponents, Any> = mutableMapOf()
+    private var componentsByType: Map<Class<*>, KoGenComponents> = mapOf()
 
-    fun getComponent(name: String): Any? {
-        return findComponentByName(name)?.let {
+    fun getComponent(type: Class<*>): Any? {
+        if (componentsByType.isEmpty()) {
+            componentsByType = createComponentsMap()
+        }
+        return componentsByType[type]?.let {
             if (it.singleton) {
                 singleComponents[it] ?: run {
                     val newComponent = it.getComponentObject()
@@ -19,13 +23,7 @@ abstract class KoGenComponentsFactory {
         }
     }
 
-    private fun findComponentByName(name: String): KoGenComponents? {
-        return componentsList().firstOrNull {
-            it.componentType.contains(name)
-        }
-    }
-
-    abstract fun componentsList(): List<KoGenComponents>
+    abstract fun createComponentsMap(): Map<Class<*>, KoGenComponents>
 
     companion object {
         private var factories: MutableMap<String, KoGenComponentsFactory> = ConcurrentHashMap()
@@ -40,6 +38,5 @@ abstract class KoGenComponentsFactory {
 
 interface KoGenComponents {
     val singleton: Boolean
-    val componentType: Array<out String>
     fun getComponentObject(): Any
 }

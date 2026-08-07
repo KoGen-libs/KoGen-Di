@@ -9,8 +9,7 @@ import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
-import com.squareup.kotlinpoet.PropertySpec
-import com.squareup.kotlinpoet.STRING
+import com.squareup.kotlinpoet.STAR
 import com.squareup.kotlinpoet.TypeSpec
 
 class ViewModelListGenerator(
@@ -21,29 +20,14 @@ class ViewModelListGenerator(
         ClassName("kz.evko.kogen_di.viewModel", "KoGenViewModels")
     private val koGenViewModelScopeClass =
         ClassName("kz.evko.kogen_di.viewModel", "KoGenViewModelScope")
+    private val classOfStar = ClassName("java.lang", "Class").parameterizedBy(STAR)
 
     fun generateViewModelList(viewModels: List<KSClassDeclaration>): FileSpec {
         val enumBuilder = TypeSpec.enumBuilder("KoGenViewModelsImpl")
             .addSuperinterface(koGenViewModelsInterface)
-            .primaryConstructor(
-                FunSpec.constructorBuilder()
-                    .addParameter("fullName", STRING)
-                    .build()
-            )
-            .addProperty(
-                PropertySpec.builder("fullName", STRING)
-                    .addModifiers(KModifier.OVERRIDE)
-                    .initializer("fullName")
-                    .build()
-            )
 
         viewModels.forEach { viewModel ->
-            enumBuilder.addEnumConstant(
-                viewModel.createComponentNames(),
-                TypeSpec.anonymousClassBuilder()
-                    .addSuperclassConstructorParameter("%S", viewModel.getName())
-                    .build()
-            )
+            enumBuilder.addEnumConstant(viewModel.createComponentNames())
         }
 
         val body = CodeBlock.builder()
@@ -89,20 +73,35 @@ class ViewModelListGenerator(
             .build()
     }
 
-    fun generateViewModelFactory(): FileSpec {
+    fun generateViewModelFactory(viewModels: List<KSClassDeclaration>): FileSpec {
         val koGenViewModelsImplClass = ClassName(packageName, "KoGenViewModelsImpl")
-        val listOfViewModels = ClassName("kotlin.collections", "List")
-            .parameterizedBy(koGenViewModelsInterface)
+        val mapType = ClassName("kotlin.collections", "Map")
+            .parameterizedBy(classOfStar, koGenViewModelsInterface)
 
-        val componentsListFun = FunSpec.builder("componentsList")
+        val mapBody = CodeBlock.builder().add("mapOf(\n").indent()
+        viewModels.forEach { viewModel ->
+            val viewModelClass = ClassName(
+                viewModel.packageName.asString(),
+                viewModel.simpleName.asString(),
+            )
+            mapBody.addStatement(
+                "%T::class.java to %T.%N,",
+                viewModelClass,
+                koGenViewModelsImplClass,
+                viewModel.createComponentNames(),
+            )
+        }
+        mapBody.unindent().add(")")
+
+        val createViewModelsMapFun = FunSpec.builder("createViewModelsMap")
             .addModifiers(KModifier.OVERRIDE)
-            .returns(listOfViewModels)
-            .addStatement("return %T.entries", koGenViewModelsImplClass)
+            .returns(mapType)
+            .addStatement("return %L", mapBody.build())
             .build()
 
         val classSpec = TypeSpec.classBuilder("KoGenViewModelScopeImpl")
             .superclass(koGenViewModelScopeClass)
-            .addFunction(componentsListFun)
+            .addFunction(createViewModelsMapFun)
             .build()
 
         return FileSpec.builder(packageName, "KoGenViewModelScopeImpl")
