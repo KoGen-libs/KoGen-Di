@@ -12,6 +12,11 @@ import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.STAR
 import com.squareup.kotlinpoet.TypeSpec
 
+/**
+ * Builds `KoGenViewModelsImpl.kt` (one enum entry per `@KoGenViewModel` class, via
+ * [generateViewModelList]) and `KoGenViewModelScopeImpl.kt` (that class mapped to its entry, via
+ * [generateViewModelFactory]).
+ */
 class ViewModelListGenerator(
     private val logger: KSPLogger,
     private val packageName: String,
@@ -22,6 +27,11 @@ class ViewModelListGenerator(
         ClassName("kz.evko.kogen_di.viewModel", "KoGenViewModelScope")
     private val classOfStar = ClassName("java.lang", "Class").parameterizedBy(STAR)
 
+    /**
+     * The `KoGenViewModelsImpl` enum implementing `KoGenViewModels` - one entry per
+     * `@KoGenViewModel` class, with a shared `getComponentObject()` override that constructs the
+     * matching class (resolving its constructor parameters via `inject()`).
+     */
     fun generateViewModelList(viewModels: List<KSClassDeclaration>): FileSpec {
         val enumBuilder = TypeSpec.enumBuilder("KoGenViewModelsImpl")
             .addSuperinterface(koGenViewModelsInterface)
@@ -73,6 +83,7 @@ class ViewModelListGenerator(
             .build()
     }
 
+    /** The `KoGenViewModelScopeImpl` subclass of `KoGenViewModelScope` - maps each `@KoGenViewModel` class to its `KoGenViewModelsImpl` entry. */
     fun generateViewModelFactory(viewModels: List<KSClassDeclaration>): FileSpec {
         val koGenViewModelsImplClass = ClassName(packageName, "KoGenViewModelsImpl")
         val mapType = ClassName("kotlin.collections", "Map")

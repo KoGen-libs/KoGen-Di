@@ -16,6 +16,11 @@ import com.squareup.kotlinpoet.STAR
 import com.squareup.kotlinpoet.TypeSpec
 import kz.evko.kogen_di.annotations.KoGenBean
 
+/**
+ * Builds `KoGenBeansImpl.kt` (one enum entry per `@KoGenBean` function, via [generateBeansList])
+ * and `KoGenBeansFactoryImpl.kt` (that function's return type mapped to its entry, via
+ * [generateBeansFactory]).
+ */
 class BeansListGenerator(
     private val logger: KSPLogger,
     private val packageName: String,
@@ -23,6 +28,12 @@ class BeansListGenerator(
     private val koGenBeansInterface = ClassName("kz.evko.kogen_di.injector", "KoGenBeans")
     private val koGenBeansFactoryClass = ClassName("kz.evko.kogen_di.injector", "KoGenBeansFactory")
 
+    /**
+     * The `KoGenBeansImpl` enum implementing `KoGenBeans` - one entry per bean function, each
+     * with its function's `@KoGenBean(singleton = ...)` flag baked in, and a shared
+     * `getComponentObject()` override that calls the matching function (resolving its own
+     * parameters via `inject()`).
+     */
     fun generateBeansList(beans: List<KSFunctionDeclaration>): FileSpec {
         val enumBuilder = TypeSpec.enumBuilder("KoGenBeansImpl")
             .addSuperinterface(koGenBeansInterface)
@@ -90,6 +101,7 @@ class BeansListGenerator(
             .build()
     }
 
+    /** The `KoGenBeansFactoryImpl` subclass of `KoGenBeansFactory` - maps each bean function's return type to its `KoGenBeansImpl` entry. */
     fun generateBeansFactory(beans: List<KSFunctionDeclaration>): FileSpec {
         val koGenBeansImplClass = ClassName(packageName, "KoGenBeansImpl")
         val classOfStar = ClassName("java.lang", "Class").parameterizedBy(STAR)

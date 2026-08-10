@@ -17,6 +17,11 @@ import com.squareup.kotlinpoet.TypeSpec
 import kz.evko.kogen_di.annotations.KoGenComponent
 import kotlin.reflect.KClass
 
+/**
+ * Builds `KoGenComponentsImpl.kt` (one enum entry per `@KoGenComponent` class, via
+ * [generateComponentList]) and `KoGenComponentsFactoryImpl.kt` (that class's own type *and* every
+ * supertype it satisfies mapped to its entry, via [createComponentFactory]).
+ */
 class ComponentListGenerator(
     private val logger: KSPLogger,
     private val packageName: String,
@@ -25,6 +30,12 @@ class ComponentListGenerator(
     private val koGenComponentsFactoryClass = ClassName("kz.evko.kogen_di.injector", "KoGenComponentsFactory")
     private val classOfStar = ClassName("java.lang", "Class").parameterizedBy(STAR)
 
+    /**
+     * The `KoGenComponentsImpl` enum implementing `KoGenComponents` - one entry per component
+     * class, each with its class's `@KoGenComponent(singleton = ...)` flag baked in, and a shared
+     * `getComponentObject()` override that constructs the matching class (resolving its
+     * constructor parameters via `inject()`).
+     */
     fun generateComponentList(components: List<KSClassDeclaration>): FileSpec {
         val enumBuilder = TypeSpec.enumBuilder("KoGenComponentsImpl")
             .addSuperinterface(koGenComponentsInterface)
@@ -90,6 +101,7 @@ class ComponentListGenerator(
             .build()
     }
 
+    /** The `KoGenComponentsFactoryImpl` subclass of `KoGenComponentsFactory` - maps each component's own type and every [satisfiableClassNames] supertype to its `KoGenComponentsImpl` entry. */
     fun createComponentFactory(components: List<KSClassDeclaration>): FileSpec {
         val koGenComponentsImplClass = ClassName(packageName, "KoGenComponentsImpl")
         val mapType = ClassName("kotlin.collections", "Map")
@@ -153,6 +165,7 @@ class ComponentListGenerator(
     }
 }
 
+/** This declaration's `singleton` argument for [annotationClass] (`@KoGenComponent`/`@KoGenBean`), or `false` if unset/absent. */
 internal fun KSDeclaration.findSingletonParam(annotationClass: KClass<*>): Boolean {
     val annotation =
         this.annotations.firstOrNull { it.shortName.asString() == annotationClass.simpleName }
@@ -160,8 +173,10 @@ internal fun KSDeclaration.findSingletonParam(annotationClass: KClass<*>): Boole
     return name?.value == true
 }
 
+/** This declaration's fully-qualified name. */
 internal fun KSDeclaration.getName(): String =
     packageName.asString() + "." + simpleName.asString()
 
+/** This declaration's generated enum-entry name - its fully-qualified name with every `.` turned into `_`, since a qualified name isn't valid as an identifier. */
 internal fun KSDeclaration.createComponentNames(): String =
     getName().replace(".", "_")
