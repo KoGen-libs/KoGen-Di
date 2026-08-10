@@ -13,6 +13,12 @@ import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.TypeVariableName
 
+/**
+ * Builds `KoGenInjectors.kt` - the `inject()`/`setApplicationContext()` entry points every
+ * consumer gets, plus (when the matching KSP option is on) a Compose `koGenViewModel()` and a
+ * `Fragment`/`ComponentActivity` `koGenViewModel()` delegate property. Written once per KSP run,
+ * regardless of whether anything is annotated - see [generateInjectors].
+ */
 class InjectFactoryGenerator(
     private val packageName: String,
 ) {
@@ -40,6 +46,10 @@ class InjectFactoryGenerator(
     private val fragmentClass = ClassName("androidx.fragment.app", "Fragment")
     private val componentActivityClass = ClassName("androidx.activity", "ComponentActivity")
 
+    /**
+     * @param includeViewModelInjector Adds the Compose `koGenViewModel()` and its backing `KoGenViewModelFactory`.
+     * @param includeFragmentInjector Adds the `Fragment`/`ComponentActivity` `koGenViewModel()` delegate property.
+     */
     fun generateInjectors(
         includeViewModelInjector: Boolean,
         includeFragmentInjector: Boolean,
@@ -82,6 +92,16 @@ class InjectFactoryGenerator(
             contextClass, reifiedT, reifiedT, reifiedT,
         )
         return FunSpec.builder("inject")
+            .addKdoc(
+                """
+                |Resolves [T] from the DI graph - a `@KoGenComponent`/`@KoGenBean`-provided
+                |instance, or the registered application `Context` itself if [T] is `Context`.
+                |
+                |@throws kz.evko.kogen_di.exceptions.ComponentNotFoundException if nothing provides [T].
+                |@throws kz.evko.kogen_di.exceptions.ContextNotFoundException if [T] is `Context` and
+                |  `setApplicationContext` hasn't been called yet.
+                """.trimMargin(),
+            )
             .addModifiers(KModifier.INLINE)
             .addTypeVariable(reifiedT.copy(reified = true))
             .returns(reifiedT)
@@ -100,6 +120,13 @@ class InjectFactoryGenerator(
             koGenScopeClass, packageName, beansFactoryImplClass, componentsFactoryImplClass,
         )
         return FunSpec.builder("setApplicationContext")
+            .addKdoc(
+                """
+                |Registers [context] as the application `Context` that `inject<Context>()` returns.
+                |Call this once, before the first `inject()`/`koGenViewModel()` call - typically from
+                |`Application.onCreate()`.
+                """.trimMargin(),
+            )
             .addParameter("context", contextClass)
             .addCode(body)
             .build()
@@ -138,6 +165,15 @@ class InjectFactoryGenerator(
             viewModelFactoryClass,
         )
         return FunSpec.builder("koGenViewModel")
+            .addKdoc(
+                """
+                |Obtains a `@KoGenViewModel`-annotated [T], scoped to the current
+                |`LocalViewModelStoreOwner` - this module's equivalent of `by viewModels()`, backed
+                |by KoGen's own DI graph instead of a hand-written `ViewModelProvider.Factory`.
+                |
+                |@throws IllegalStateException if there's no `LocalViewModelStoreOwner` in scope.
+                """.trimMargin(),
+            )
             .addAnnotation(composableAnnotation)
             .addModifiers(KModifier.INLINE)
             .addTypeVariable(reifiedT.copy(reified = true))
@@ -160,6 +196,13 @@ class InjectFactoryGenerator(
             .build()
 
         return TypeSpec.classBuilder("KoGenViewModelFactory")
+            .addKdoc(
+                """
+                |`ViewModelProvider.Factory` that resolves a requested ViewModel through [scope]'s
+                |DI graph instead of constructing it directly - what `koGenViewModel()` uses under
+                |the hood.
+                """.trimMargin(),
+            )
             .addSuperinterface(factoryInterface)
             .primaryConstructor(
                 FunSpec.constructorBuilder()
@@ -215,6 +258,18 @@ class InjectFactoryGenerator(
         )
 
         return FunSpec.builder("koGenViewModel")
+            .addKdoc(
+                """
+                |Lazily obtains a `@KoGenViewModel`-annotated [T] scoped to [ownerProducer]'s
+                |`ViewModelStore` - this type's equivalent of AndroidX's `by viewModels()`, backed
+                |by KoGen's own DI graph.
+                |
+                |@param extrasProducer Accepted only to match `by viewModels()`'s call shape - KoGen's
+                |  own `ViewModelProvider.Factory` doesn't use `CreationExtras`, so this is ignored.
+                |@param ownerProducer The `ViewModelStoreOwner` [T] is scoped to. Defaults to the
+                |  receiver itself.
+                """.trimMargin(),
+            )
             .receiver(extensionClassName)
             .addModifiers(KModifier.INLINE)
             .addTypeVariable(reifiedT.copy(reified = true))

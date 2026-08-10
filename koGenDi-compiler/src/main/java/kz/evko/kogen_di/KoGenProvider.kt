@@ -16,6 +16,7 @@ import kz.evko.kogen_di.annotations.KoGenViewModel
 import kz.evko.kogen_di.validation.ProviderNode
 import kotlin.reflect.KClass
 
+/** KSP entry point (registered via `META-INF/services`) - builds one [KoGenProcessor] per compilation. */
 class KoGenProvider : SymbolProcessorProvider {
     override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor {
         val fileWriter = FileWriter(environment.logger, environment.codeGenerator)
@@ -23,6 +24,18 @@ class KoGenProvider : SymbolProcessorProvider {
     }
 }
 
+/**
+ * Finds every `@KoGenComponent`/`@KoGenBean`/`@KoGenViewModel`-annotated declaration, validates
+ * the dependency graph they form (see [validateDependencies]), then hands them to [fileWriter] to
+ * generate the beans/components/ViewModel-scope implementations and the `inject()`/
+ * `koGenViewModel()` entry points.
+ *
+ * Reads three KSP options (`ksp { arg(...) }` in the consuming module's build script), all
+ * optional:
+ * - `packageName` - see `FileWriter.setPackageName`.
+ * - `includeViewModelInjector` - `"true"` to also generate `koGenViewModel()` for Compose.
+ * - `includeFragmentInjector` - `"true"` to also generate the `Fragment`/`ComponentActivity` `koGenViewModel()` delegate property.
+ */
 internal class KoGenProcessor(
     private val logger: KSPLogger,
     private val args: Map<String, String>,
@@ -35,6 +48,7 @@ internal class KoGenProcessor(
     // FileAlreadyExistsException. Codegen only ever needs to run once.
     private var hasGenerated = false
 
+    /** @return Every annotated declaration that isn't valid yet, for KSP to retry next round. */
     override fun process(resolver: Resolver): List<KSAnnotated> {
         if (hasGenerated) return emptyList()
 
@@ -84,6 +98,14 @@ internal class KoGenProcessor(
         return result
     }
 
+    /**
+     * Builds one [ProviderNode] per `@KoGenComponent`/`@KoGenBean`/`@KoGenViewModel` declaration -
+     * what it provides and what it requires - and runs [DependencyValidator] over all of them
+     * together, so a missing or ambiguous dependency is caught at compile time instead of surfacing
+     * as a runtime `ComponentNotFoundException`. `@KoGenViewModel` entries are validated the same
+     * way as components, even though at runtime they're resolved through a separate scope
+     * (`KoGenViewModelScope`, in the runtime module) rather than `inject()`.
+     */
     fun validateDependencies(
         componentClasses: Sequence<KSClassDeclaration>,
         beanFunctions: Sequence<KSFunctionDeclaration>,
@@ -167,6 +189,7 @@ internal class KoGenProcessor(
     }
 }
 
+/** Every supertype this class satisfies, recursively, except `Any` - what makes it injectable as more than just its own concrete type. */
 private fun KSClassDeclaration.getSuperTypes(): List<String> {
     val superTypes = mutableSetOf<String>()
     this.superTypes.forEach { typeReference ->
@@ -183,6 +206,7 @@ private fun KSClassDeclaration.getSuperTypes(): List<String> {
     return superTypes.toList()
 }
 
+/** Every declaration annotated with [kClass], regardless of which of the three annotations it is. */
 private fun Resolver.findAnnotations(
     kClass: KClass<*>,
 ) = getSymbolsWithAnnotation(
