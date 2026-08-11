@@ -34,6 +34,7 @@ deploy:
           - 'koGenDi-common/build/staging-deploy'
           - 'koGenDi/build/staging-deploy'
           - 'koGenDi-compiler/build/staging-deploy'
+          - 'koGenDi-gradle-plugin/build/staging-deploy'
         url: 'https://central.sonatype.com/api/v1/publisher'
         namespace: 'io.github.eugenprog'
         # PomChecker (внутренняя проверка JReleaser) не понимает packaging=aar
