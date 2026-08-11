@@ -51,6 +51,10 @@ android {
     }
 }
 
+// Deliberately raw ksp { arg(...) } here, not the koGenDi Gradle plugin from
+// koGenDi-gradle-plugin - that plugin isn't published anywhere this repo's own build can resolve
+// it from without a prior `publishToMavenLocal`, and this app needs to build for anyone who just
+// clones the repo. See koGenNavigation's demo modules for the same reasoning applied there.
 ksp {
     arg("packageName", "kz.evko.kogen")
     arg("includeViewModelInjector", "true")

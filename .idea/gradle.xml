@@ -14,6 +14,7 @@
             <option value="$PROJECT_DIR$/koGenDi" />
             <option value="$PROJECT_DIR$/koGenDi-common" />
             <option value="$PROJECT_DIR$/koGenDi-compiler" />
+            <option value="$PROJECT_DIR$/koGenDi-gradle-plugin" />
           </set>
         </option>
       </GradleProjectSettings>
