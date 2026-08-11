@@ -3,7 +3,7 @@
 All notable changes to this project are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.0.9] - 2026-08-11
 
 ### Added
 - **Typed `koGenDi { }` Gradle DSL**, in a new `android-di-gradle-plugin` artifact
