@@ -11,11 +11,18 @@
 
 ## 🚀 Installation and Setup
 
-The library is published on **Maven Central**.
+The library is published on **Maven Central**. There are two ways to configure it - pick one:
+
+- **Option A - the `koGenDi { }` Gradle plugin** (recommended): typed config, autocomplete,
+  checked at Gradle-script-compile time instead of failing silently on a typo'd string. It also
+  adds the runtime/compiler dependencies for you.
+- **Option B - a raw `ksp { arg(...) }` block**: fewer moving parts, one less plugin to apply.
+
+Both configure the exact same KSP processor underneath - pick whichever fits, or mix per module.
 
 ### Step 1: Apply the KSP Plugin
 
-First, make sure the KSP plugin is applied to your project.
+Either way, make sure the KSP plugin is applied to your project first.
 
 **In your root `build.gradle.kts` file:**
 ```kotlin
@@ -33,7 +40,42 @@ plugins {
 }
 ```
 
-### Step 2: Add Dependencies
+### Step 2A: The `koGenDi { }` Plugin (recommended)
+
+```kotlin
+plugins {
+    // ...
+    id("com.google.devtools.ksp")
+    id("io.github.eugenprog.kogen-di") version "<version>"
+}
+
+koGenDi {
+    packageName.set("com.myawesome.project")
+    includeViewModelInjector.set(true)
+    includeFragmentInjector.set(true)
+}
+
+dependencies {
+    // Needed only if you enable includeViewModelInjector (the @Composable koGenViewModel() helper)
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose-android:2.9.4")
+
+    // Needed only if you enable includeFragmentInjector (the `by koGenViewModel()` delegate on Fragment/ComponentActivity)
+    implementation("androidx.fragment:fragment-ktx:1.8.9")
+
+    // Nothing else needed here - the plugin adds the KoGen DI runtime and its KSP processor for
+    // you, at a matching version.
+}
+```
+
+The plugin does *not* apply `com.google.devtools.ksp` itself - KSP's own version is tied tightly
+to your project's Kotlin version, so you keep controlling that yourself (Step 1 above); the
+plugin just requires it to already be applied, and errors clearly if it isn't.
+
+Every property is optional and behaves exactly like its `ksp { arg(...) }` equivalent below - see
+Step 2B's list for what each one does; `packageName` left unset falls back to inferring one from
+your first `@KoGenComponent`/`@KoGenBean` declaration's own package.
+
+### Step 2B: A Raw `ksp { }` Block (alternative)
 
 The library ships as two artifacts: a small runtime you compile against, and a KSP processor that runs only at build time.
 ```kotlin
@@ -51,9 +93,6 @@ dependencies {
 ```
 **Important:** *The `implementation` and `ksp` versions must match - they're always released together.*
 
-### Step 3: Configure Code Generation
-
-In your module's `build.gradle.kts`, add a `ksp` block to configure the generator.
 ```kotlin
 ksp {
     // Required parameter: your project's package name
@@ -64,11 +103,60 @@ ksp {
     arg("includeFragmentInjector", "true")
 }
 ```
-* `packageName` (**required**) – Needed so that the generated classes are placed in the correct namespace of your project.
+* `packageName` (**required** unless you're fine with the inferred default) – Needed so that the generated classes are placed in the correct namespace of your project.
 * `includeViewModelInjector` (optional) – Accepts `true` or `false`. Enables the `@Composable koGenViewModel()` helper. Defaults to `false`.
 * `includeFragmentInjector` (optional) – Accepts `true` or `false`. Enables the `by koGenViewModel()` property delegate on `Fragment` and `ComponentActivity`. Defaults to `false`.
 
-### Step 4: Set the Application Context (if you need it)
+### Using a Version Catalog (optional)
+
+Everything above uses plain string literals for clarity. If your project already declares its
+plugins/dependencies through a Gradle version catalog (`gradle/libs.versions.toml`) - the
+currently recommended way to do it - here's the equivalent:
+
+```toml
+[versions]
+ksp = "2.1.0-1.0.29" # keep in sync with your Kotlin version - see Step 1 above
+kogenDi = "<version>"
+
+[libraries]
+kogen-di-runtime = { group = "io.github.eugenprog", name = "android-di", version.ref = "kogenDi" }
+kogen-di-compiler = { group = "io.github.eugenprog", name = "android-di-compiler", version.ref = "kogenDi" }
+
+[plugins]
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+kogen-di = { id = "io.github.eugenprog.kogen-di", version.ref = "kogenDi" }
+```
+
+```kotlin
+// root build.gradle.kts
+plugins {
+    alias(libs.plugins.ksp) apply false
+}
+```
+
+```kotlin
+// module build.gradle.kts - Option A, the Gradle plugin
+plugins {
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.kogen.di)
+}
+
+// no runtime/compiler dependency entry needed here - the plugin adds them for you, same as with string literals
+```
+
+```kotlin
+// module build.gradle.kts - Option B, the raw ksp block
+plugins {
+    alias(libs.plugins.ksp)
+}
+
+dependencies {
+    implementation(libs.kogen.di.runtime)
+    ksp(libs.kogen.di.compiler)
+}
+```
+
+### Step 3: Set the Application Context (if you need it)
 
 If any of your `@KoGenBean` or `@KoGenComponent` classes need `Context`, call this once - typically in your `Application` class:
 ```kotlin

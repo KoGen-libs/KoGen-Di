@@ -3,6 +3,18 @@
 All notable changes to this project are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Added
+- **Typed `koGenDi { }` Gradle DSL**, in a new `android-di-gradle-plugin` artifact
+  (`io.github.eugenprog.kogen-di`) - replaces the string-based `ksp { arg(...) }` block with a
+  real, autocompletable extension (`Property<String>`/`Property<Boolean>`), checked at
+  Gradle-script-compile time instead of failing silently on a typo'd string. The plugin also adds
+  the `android-di`/`android-di-compiler` dependencies for you, at a matching version - it does
+  *not* apply `com.google.devtools.ksp` itself (that version is tied to your own Kotlin version,
+  so you still apply it yourself). The old raw `ksp { arg(...) }` block still works unchanged,
+  for anyone who'd rather not add the extra plugin dependency.
+
 ## [1.0.8] - 2026-08-07
 
 ### Added
