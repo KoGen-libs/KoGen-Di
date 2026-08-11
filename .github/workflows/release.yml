@@ -43,10 +43,10 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
 
       - name: Run tests
-        run: ./gradlew :koGenDi-common:test :koGenDi:test :koGenDi-compiler:test :app:testDebugUnitTest
+        run: ./gradlew :koGenDi-common:test :koGenDi:test :koGenDi-compiler:test :koGenDi-gradle-plugin:test :app:testDebugUnitTest
 
       - name: Build and create artifacts
-        run: ./gradlew :koGenDi-common:publish :koGenDi:publish :koGenDi-compiler:publish -Pversion=${{ steps.get_version.outputs.TAG_VERSION }}
+        run: ./gradlew :koGenDi-common:publish :koGenDi:publish :koGenDi-compiler:publish :koGenDi-gradle-plugin:publish -Pversion=${{ steps.get_version.outputs.TAG_VERSION }}
 
       - name: Release with JReleaser
         uses: jreleaser/release-action@v2
