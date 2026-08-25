@@ -1,7 +1,6 @@
 plugins {
     id("java-library")
     alias(libs.plugins.jetbrains.kotlin.jvm)
-    alias(libs.plugins.jreleaser)
     id("maven-publish")
     id("signing")
 }
@@ -34,7 +33,7 @@ publishing {
             pom {
                 name.set("KoGen DI Common")
                 description.set("Shared annotations for KoGen DI")
-                url.set("https://github.com/EugenProg/KoGen-DI_demo")
+                url.set("https://github.com/EugenProg/KoGen-Di")
 
                 licenses {
                     license {

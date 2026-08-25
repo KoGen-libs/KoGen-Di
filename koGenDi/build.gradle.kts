@@ -1,7 +1,6 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.jreleaser)
     id("maven-publish")
     id("signing")
 }
@@ -54,7 +53,7 @@ afterEvaluate {
                 pom {
                     name.set("KoGen DI")
                     description.set("The best DI for Android)")
-                    url.set("https://github.com/EugenProg/KoGen-DI_demo")
+                    url.set("https://github.com/EugenProg/KoGen-Di")
 
                     licenses {
                         license {

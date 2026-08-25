@@ -1,7 +1,6 @@
 plugins {
     id("java-library")
     alias(libs.plugins.jetbrains.kotlin.jvm)
-    alias(libs.plugins.jreleaser)
     id("maven-publish")
     id("signing")
 }
@@ -29,12 +28,6 @@ dependencies {
     implementation(libs.kotlinpoet)
     implementation(libs.kotlinpoet.ksp)
 
-    constraints {
-        implementation("org.apache.commons:commons-compress:1.26.2") {
-            because("JReleaser requires this version to avoid a conflict")
-        }
-    }
-
     testImplementation(libs.junit)
     testImplementation(libs.mockito.core)
     testImplementation(libs.kctfork.core)
@@ -52,7 +45,7 @@ publishing {
             pom {
                 name.set("KoGen DI Compiler")
                 description.set("KSP annotation processor for KoGen DI")
-                url.set("https://github.com/EugenProg/KoGen-DI_demo")
+                url.set("https://github.com/EugenProg/KoGen-Di")
 
                 licenses {
                     license {
