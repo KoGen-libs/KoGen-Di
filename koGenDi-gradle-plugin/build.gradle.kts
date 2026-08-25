@@ -1,9 +1,9 @@
 plugins {
     `java-gradle-plugin`
     alias(libs.plugins.jetbrains.kotlin.jvm)
-    alias(libs.plugins.jreleaser)
     id("maven-publish")
     id("signing")
+    alias(libs.plugins.gradle.plugin.publish)
 }
 
 group = project.properties["GROUP"].toString()
@@ -20,6 +20,8 @@ kotlin {
 }
 
 gradlePlugin {
+    website.set("https://github.com/EugenProg/KoGen-Di")
+    vcsUrl.set("https://github.com/EugenProg/KoGen-Di")
     plugins {
         create("koGenDi") {
             id = "io.github.eugenprog.kogen-di"
@@ -27,6 +29,7 @@ gradlePlugin {
             description = "Typed Gradle DSL for the KoGen DI KSP compiler - " +
                 "replaces string-based ksp { arg(...) } options with a real koGenDi { } block."
             implementationClass = "kz.evko.kogen_di.gradle.KoGenDiPlugin"
+            tags = listOf("android", "dependency-injection", "di", "ksp", "codegen")
         }
     }
 }
@@ -75,12 +78,6 @@ dependencies {
     // compileOnly/runtime classpath deliberately (see KoGenDiPlugin's doc comment).
     testImplementation(libs.symbol.processing.gradle.plugin)
     testImplementation("org.jetbrains.kotlin:kotlin-gradle-plugin:${libs.versions.kotlin.get()}")
-
-    constraints {
-        implementation("org.apache.commons:commons-compress:1.26.2") {
-            because("JReleaser requires this version to avoid a conflict")
-        }
-    }
 }
 
 // java-gradle-plugin only wires up its "pluginMaven"/marker publications once the project is
@@ -97,7 +94,7 @@ publishing {
         pom {
             name.set("KoGen DI Gradle Plugin")
             description.set("Typed Gradle DSL for the KoGen DI KSP compiler")
-            url.set("https://github.com/EugenProg/KoGen-DI_demo")
+            url.set("https://github.com/EugenProg/KoGen-Di")
 
             licenses {
                 license {

@@ -12,6 +12,8 @@ env:
   JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.JRELEASER_MAVENCENTRAL_SONATYPE_USERNAME }}
   JRELEASER_MAVENCENTRAL_TOKEN: ${{ secrets.JRELEASER_MAVENCENTRAL_SONATYPE_TOKEN }}
+  GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_KEY }}
+  GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_SECRET }}
 
 jobs:
   release:
@@ -47,6 +49,9 @@ jobs:
 
       - name: Build and create artifacts
         run: ./gradlew :koGenDi-common:publish :koGenDi:publish :koGenDi-compiler:publish :koGenDi-gradle-plugin:publish -Pversion=${{ steps.get_version.outputs.TAG_VERSION }}
+
+      - name: Publish plugin to the Gradle Plugin Portal
+        run: ./gradlew :koGenDi-gradle-plugin:publishPlugins -Pversion=${{ steps.get_version.outputs.TAG_VERSION }}
 
       - name: Release with JReleaser
         uses: jreleaser/release-action@v2
