@@ -17,10 +17,10 @@ class KoGenComponentsFactoryTest {
     }
 
     private class TestFactory(
-        private val map: Map<Class<*>, KoGenComponents>,
+        private val map: Map<KoGenKey, KoGenComponents>,
     ) : KoGenComponentsFactory() {
         var createCalls = 0
-        override fun createComponentsMap(): Map<Class<*>, KoGenComponents> {
+        override fun createComponentsMap(): Map<KoGenKey, KoGenComponents> {
             createCalls++
             return map
         }
@@ -40,8 +40,8 @@ class KoGenComponentsFactoryTest {
         val component = FakeComponent(singleton = false)
         val factory = TestFactory(
             mapOf(
-                String::class.java to component,
-                CharSequence::class.java to component,
+                KoGenKey(String::class.java) to component,
+                KoGenKey(CharSequence::class.java) to component,
             )
         )
 
@@ -54,7 +54,7 @@ class KoGenComponentsFactoryTest {
     @Test
     fun `non-singleton component is created anew on every getComponent call`() {
         val component = FakeComponent(singleton = false)
-        val factory = TestFactory(mapOf(String::class.java to component))
+        val factory = TestFactory(mapOf(KoGenKey(String::class.java) to component))
 
         val first = factory.getComponent(String::class.java)
         val second = factory.getComponent(String::class.java)
@@ -66,7 +66,7 @@ class KoGenComponentsFactoryTest {
     @Test
     fun `singleton component is created once and reused on every subsequent getComponent call`() {
         val component = FakeComponent(singleton = true)
-        val factory = TestFactory(mapOf(String::class.java to component))
+        val factory = TestFactory(mapOf(KoGenKey(String::class.java) to component))
 
         val first = factory.getComponent(String::class.java)
         val second = factory.getComponent(String::class.java)
@@ -77,13 +77,38 @@ class KoGenComponentsFactoryTest {
 
     @Test
     fun `createComponentsMap is invoked lazily, only once, across many lookups`() {
-        val factory = TestFactory(mapOf(String::class.java to FakeComponent(false)))
+        val factory = TestFactory(mapOf(KoGenKey(String::class.java) to FakeComponent(false)))
 
         factory.getComponent(String::class.java)
         factory.getComponent(Int::class.java)
         factory.getComponent(String::class.java)
 
         assertEquals(1, factory.createCalls)
+    }
+
+    @Test
+    fun `getComponent distinguishes two components registered under the same type with different qualifiers`() {
+        val default = FakeComponent(singleton = false)
+        val named = FakeComponent(singleton = false)
+        val factory = TestFactory(
+            mapOf(
+                KoGenKey(String::class.java) to default,
+                KoGenKey(String::class.java, qualifier = "named") to named,
+            )
+        )
+
+        factory.getComponent(String::class.java)
+        factory.getComponent(String::class.java, qualifier = "named")
+
+        assertEquals(1, default.creations)
+        assertEquals(1, named.creations)
+    }
+
+    @Test
+    fun `getComponent returns null when only a differently-qualified entry exists`() {
+        val factory = TestFactory(mapOf(KoGenKey(String::class.java, qualifier = "named") to FakeComponent(false)))
+
+        assertNull(factory.getComponent(String::class.java))
     }
 
     @Test
@@ -95,6 +120,6 @@ class KoGenComponentsFactoryTest {
     }
 
     class EmptyFactoryForInstanceTest : KoGenComponentsFactory() {
-        override fun createComponentsMap(): Map<Class<*>, KoGenComponents> = emptyMap()
+        override fun createComponentsMap(): Map<KoGenKey, KoGenComponents> = emptyMap()
     }
 }

@@ -17,10 +17,10 @@ class KoGenBeansFactoryTest {
     }
 
     private class TestFactory(
-        private val map: Map<Class<*>, KoGenBeans>,
+        private val map: Map<KoGenKey, KoGenBeans>,
     ) : KoGenBeansFactory() {
         var createCalls = 0
-        override fun createBeansList(): Map<Class<*>, KoGenBeans> {
+        override fun createBeansList(): Map<KoGenKey, KoGenBeans> {
             createCalls++
             return map
         }
@@ -35,14 +35,14 @@ class KoGenBeansFactoryTest {
     @Test
     fun `findBeanByType finds a registered bean by exact class`() {
         val bean = FakeBean(singleton = false)
-        val factory = TestFactory(mapOf(String::class.java to bean))
+        val factory = TestFactory(mapOf(KoGenKey(String::class.java) to bean))
         assertSame(bean, factory.findBeanByType(String::class.java))
     }
 
     @Test
     fun `non-singleton bean is created anew on every getBean call`() {
         val bean = FakeBean(singleton = false)
-        val factory = TestFactory(mapOf(String::class.java to bean))
+        val factory = TestFactory(mapOf(KoGenKey(String::class.java) to bean))
 
         val first = factory.getBean(bean)
         val second = factory.getBean(bean)
@@ -54,7 +54,7 @@ class KoGenBeansFactoryTest {
     @Test
     fun `singleton bean is created once and reused on every subsequent getBean call`() {
         val bean = FakeBean(singleton = true)
-        val factory = TestFactory(mapOf(String::class.java to bean))
+        val factory = TestFactory(mapOf(KoGenKey(String::class.java) to bean))
 
         val first = factory.getBean(bean)
         val second = factory.getBean(bean)
@@ -67,13 +67,28 @@ class KoGenBeansFactoryTest {
 
     @Test
     fun `createBeansList is invoked lazily, only once, across many lookups`() {
-        val factory = TestFactory(mapOf(String::class.java to FakeBean(false)))
+        val factory = TestFactory(mapOf(KoGenKey(String::class.java) to FakeBean(false)))
 
         factory.findBeanByType(String::class.java)
         factory.findBeanByType(Int::class.java)
         factory.findBeanByType(String::class.java)
 
         assertEquals(1, factory.createCalls)
+    }
+
+    @Test
+    fun `findBeanByType distinguishes two beans registered under the same type with different qualifiers`() {
+        val default = FakeBean(singleton = false)
+        val named = FakeBean(singleton = false)
+        val factory = TestFactory(
+            mapOf(
+                KoGenKey(String::class.java) to default,
+                KoGenKey(String::class.java, qualifier = "named") to named,
+            )
+        )
+
+        assertSame(default, factory.findBeanByType(String::class.java))
+        assertSame(named, factory.findBeanByType(String::class.java, qualifier = "named"))
     }
 
     @Test
@@ -87,6 +102,6 @@ class KoGenBeansFactoryTest {
     // Публичный класс с public no-arg конструктором - getInstance создаёт его через reflection
     // (Class.getConstructor().newInstance()), так что не может быть private/anonymous.
     class EmptyFactoryForInstanceTest : KoGenBeansFactory() {
-        override fun createBeansList(): Map<Class<*>, KoGenBeans> = emptyMap()
+        override fun createBeansList(): Map<KoGenKey, KoGenBeans> = emptyMap()
     }
 }

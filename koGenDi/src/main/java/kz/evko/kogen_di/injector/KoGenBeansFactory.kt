@@ -10,14 +10,14 @@ import java.util.concurrent.ConcurrentHashMap
  */
 abstract class KoGenBeansFactory {
     private val singleBeans: MutableMap<KoGenBeans, Any> = mutableMapOf()
-    private var beansList: Map<Class<*>, KoGenBeans> = mapOf()
+    private var beansList: Map<KoGenKey, KoGenBeans> = mapOf()
 
-    /** [createBeansList]'s entry for [type], if any - built lazily on first lookup rather than eagerly. */
-    fun findBeanByType(type: Class<*>): KoGenBeans? {
+    /** [createBeansList]'s entry for [type]/[qualifier], if any - built lazily on first lookup rather than eagerly. */
+    fun findBeanByType(type: Class<*>, qualifier: String = ""): KoGenBeans? {
         if (beansList.isEmpty()) {
             beansList = createBeansList()
         }
-        return beansList[type]
+        return beansList[KoGenKey(type, qualifier)]
     }
 
     /** [bean]'s instance - the cached one if `@KoGenBean` marked it `singleton`, a fresh one otherwise. */
@@ -33,8 +33,8 @@ abstract class KoGenBeansFactory {
         }
     }
 
-    /** Every `@KoGenBean` function's return type, mapped to the [KoGenBeans] entry that calls it. Implemented by the generated `KoGenBeansFactoryImpl`. */
-    abstract fun createBeansList(): Map<Class<*>, KoGenBeans>
+    /** Every `@KoGenBean` function's return type, paired with its function's `qualifier`, mapped to the [KoGenBeans] entry that calls it. Implemented by the generated `KoGenBeansFactoryImpl`. */
+    abstract fun createBeansList(): Map<KoGenKey, KoGenBeans>
 
     companion object {
         private var factories: MutableMap<String, KoGenBeansFactory> = ConcurrentHashMap()

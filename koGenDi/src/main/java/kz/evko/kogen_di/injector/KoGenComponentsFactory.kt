@@ -11,14 +11,14 @@ import java.util.concurrent.ConcurrentHashMap
  */
 abstract class KoGenComponentsFactory {
     private val singleComponents: MutableMap<KoGenComponents, Any> = mutableMapOf()
-    private var componentsByType: Map<Class<*>, KoGenComponents> = mapOf()
+    private var componentsByKey: Map<KoGenKey, KoGenComponents> = mapOf()
 
-    /** [type]'s instance from [createComponentsMap] - the cached one if `@KoGenComponent` marked it `singleton`, a fresh one otherwise - or `null` if nothing provides [type]. */
-    fun getComponent(type: Class<*>): Any? {
-        if (componentsByType.isEmpty()) {
-            componentsByType = createComponentsMap()
+    /** [type]/[qualifier]'s instance from [createComponentsMap] - the cached one if `@KoGenComponent` marked it `singleton`, a fresh one otherwise - or `null` if nothing provides that (type, qualifier) pair. */
+    fun getComponent(type: Class<*>, qualifier: String = ""): Any? {
+        if (componentsByKey.isEmpty()) {
+            componentsByKey = createComponentsMap()
         }
-        return componentsByType[type]?.let {
+        return componentsByKey[KoGenKey(type, qualifier)]?.let {
             if (it.singleton) {
                 singleComponents[it] ?: run {
                     val newComponent = it.getComponentObject()
@@ -31,8 +31,8 @@ abstract class KoGenComponentsFactory {
         }
     }
 
-    /** Every `@KoGenComponent` class's own type and supertypes, mapped to the [KoGenComponents] entry that constructs it. Implemented by the generated `KoGenComponentsFactoryImpl`. */
-    abstract fun createComponentsMap(): Map<Class<*>, KoGenComponents>
+    /** Every `@KoGenComponent` class's own type and supertypes - each paired with its declaration's `qualifier` - mapped to the [KoGenComponents] entry that constructs it. Implemented by the generated `KoGenComponentsFactoryImpl`. */
+    abstract fun createComponentsMap(): Map<KoGenKey, KoGenComponents>
 
     companion object {
         private var factories: MutableMap<String, KoGenComponentsFactory> = ConcurrentHashMap()

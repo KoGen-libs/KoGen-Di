@@ -9,12 +9,12 @@ import org.junit.Test
 
 class KoGenScopeTest {
 
-    private class TestBeansFactory(private val map: Map<Class<*>, KoGenBeans>) : KoGenBeansFactory() {
-        override fun createBeansList(): Map<Class<*>, KoGenBeans> = map
+    private class TestBeansFactory(private val map: Map<KoGenKey, KoGenBeans>) : KoGenBeansFactory() {
+        override fun createBeansList(): Map<KoGenKey, KoGenBeans> = map
     }
 
-    private class TestComponentsFactory(private val map: Map<Class<*>, KoGenComponents>) : KoGenComponentsFactory() {
-        override fun createComponentsMap(): Map<Class<*>, KoGenComponents> = map
+    private class TestComponentsFactory(private val map: Map<KoGenKey, KoGenComponents>) : KoGenComponentsFactory() {
+        override fun createComponentsMap(): Map<KoGenKey, KoGenComponents> = map
     }
 
     private class FakeBean(private val value: Any) : KoGenBeans {
@@ -31,7 +31,7 @@ class KoGenScopeTest {
     fun `getComponent resolves via the beans factory first`() {
         val beanValue = "from-bean"
         val scope = KoGenScope(
-            beansFactory = TestBeansFactory(mapOf(String::class.java to FakeBean(beanValue))),
+            beansFactory = TestBeansFactory(mapOf(KoGenKey(String::class.java) to FakeBean(beanValue))),
             componentsFactory = TestComponentsFactory(emptyMap()),
         )
 
@@ -43,7 +43,7 @@ class KoGenScopeTest {
         val componentValue = "from-component"
         val scope = KoGenScope(
             beansFactory = TestBeansFactory(emptyMap()),
-            componentsFactory = TestComponentsFactory(mapOf(String::class.java to FakeComponent(componentValue))),
+            componentsFactory = TestComponentsFactory(mapOf(KoGenKey(String::class.java) to FakeComponent(componentValue))),
         )
 
         assertEquals(componentValue, scope.getComponent(String::class.java))
@@ -53,11 +53,29 @@ class KoGenScopeTest {
     fun `getComponent prefers a bean over a component registered under the same type`() {
         val beanValue = "from-bean"
         val scope = KoGenScope(
-            beansFactory = TestBeansFactory(mapOf(String::class.java to FakeBean(beanValue))),
-            componentsFactory = TestComponentsFactory(mapOf(String::class.java to FakeComponent("from-component"))),
+            beansFactory = TestBeansFactory(mapOf(KoGenKey(String::class.java) to FakeBean(beanValue))),
+            componentsFactory = TestComponentsFactory(mapOf(KoGenKey(String::class.java) to FakeComponent("from-component"))),
         )
 
         assertEquals(beanValue, scope.getComponent(String::class.java))
+    }
+
+    @Test
+    fun `getComponent resolves the qualified entry when a qualifier is passed`() {
+        val defaultValue = "default"
+        val namedValue = "named"
+        val scope = KoGenScope(
+            beansFactory = TestBeansFactory(
+                mapOf(
+                    KoGenKey(String::class.java) to FakeBean(defaultValue),
+                    KoGenKey(String::class.java, qualifier = "named") to FakeBean(namedValue),
+                )
+            ),
+            componentsFactory = TestComponentsFactory(emptyMap()),
+        )
+
+        assertEquals(defaultValue, scope.getComponent(String::class.java))
+        assertEquals(namedValue, scope.getComponent(String::class.java, qualifier = "named"))
     }
 
     @Test(expected = ComponentNotFoundException::class)
@@ -136,10 +154,10 @@ class KoGenScopeTest {
     // Публичные классы с public no-arg конструктором - KoGenBeansFactory/KoGenComponentsFactory.getInstance()
     // создают их через reflection внутри KoGenScope.getScope().
     class EmptyBeansFactory : KoGenBeansFactory() {
-        override fun createBeansList(): Map<Class<*>, KoGenBeans> = emptyMap()
+        override fun createBeansList(): Map<KoGenKey, KoGenBeans> = emptyMap()
     }
 
     class EmptyComponentsFactory : KoGenComponentsFactory() {
-        override fun createComponentsMap(): Map<Class<*>, KoGenComponents> = emptyMap()
+        override fun createComponentsMap(): Map<KoGenKey, KoGenComponents> = emptyMap()
     }
 }

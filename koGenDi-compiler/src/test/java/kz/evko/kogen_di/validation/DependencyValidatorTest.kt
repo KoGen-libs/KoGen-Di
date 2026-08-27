@@ -24,11 +24,14 @@ class DependencyValidatorTest {
         concreteType: String,
         requires: List<String> = emptyList(),
         satisfies: List<String> = listOf(concreteType),
+        qualifier: String = "",
+        requiresQualified: List<RequiredDependency> = emptyList(),
     ) = ProviderNode(
         concreteType = concreteType,
-        requiredDependencies = requires,
+        requiredDependencies = requires.map { RequiredDependency(it) } + requiresQualified,
         satisfiableTypes = satisfies,
         sourceElement = fakeSource(),
+        qualifier = qualifier,
     )
 
     /** Провайдер вроде @KoGenBean - сам НЕ входит в свой satisfiableTypes (в отличие от компонента). */
@@ -36,11 +39,14 @@ class DependencyValidatorTest {
         functionName: String,
         returnType: String,
         requires: List<String> = emptyList(),
+        qualifier: String = "",
+        requiresQualified: List<RequiredDependency> = emptyList(),
     ) = ProviderNode(
         concreteType = functionName,
-        requiredDependencies = requires,
+        requiredDependencies = requires.map { RequiredDependency(it) } + requiresQualified,
         satisfiableTypes = listOf(returnType),
         sourceElement = fakeSource(),
+        qualifier = qualifier,
     )
 
     @Test
@@ -231,6 +237,135 @@ class DependencyValidatorTest {
             logger.errors.size,
         )
         assertTrue(logger.errors[0].contains("Missing dependency"))
+    }
+
+    // --- @KoGenQualifier-requested (per-parameter) dependencies ---
+
+    @Test
+    fun `a qualified dependency is satisfied by the provider with the matching qualifier`() {
+        val logger = FakeKSPLogger()
+        val providers = listOf(
+            componentNode("com.app.PrimaryRepository", satisfies = listOf("com.app.Repository"), qualifier = "primary"),
+            componentNode("com.app.SecondaryRepository", satisfies = listOf("com.app.Repository"), qualifier = "secondary"),
+            componentNode(
+                "com.app.Consumer",
+                requiresQualified = listOf(RequiredDependency("com.app.Repository", qualifier = "primary")),
+            ),
+        )
+
+        DependencyValidator(providers, logger).validate()
+
+        assertTrue("expected no errors but got: ${logger.errors}", logger.errors.isEmpty())
+    }
+
+    @Test
+    fun `a qualified provider is invisible to an unqualified request - reported as missing`() {
+        val logger = FakeKSPLogger()
+        val providers = listOf(
+            componentNode("com.app.SecondaryRepository", satisfies = listOf("com.app.Repository"), qualifier = "secondary"),
+            componentNode("com.app.Consumer", requires = listOf("com.app.Repository")),
+        )
+
+        DependencyValidator(providers, logger).validate()
+
+        assertEquals(1, logger.errors.size)
+        assertTrue(logger.errors[0].contains("Missing dependency"))
+        assertTrue(logger.errors[0].contains("com.app.Repository"))
+    }
+
+    @Test
+    fun `a request for a qualifier nobody provides is reported as missing, even though the unqualified type exists`() {
+        val logger = FakeKSPLogger()
+        val providers = listOf(
+            componentNode("com.app.DefaultRepository", satisfies = listOf("com.app.Repository")),
+            componentNode(
+                "com.app.Consumer",
+                requiresQualified = listOf(RequiredDependency("com.app.Repository", qualifier = "primary")),
+            ),
+        )
+
+        DependencyValidator(providers, logger).validate()
+
+        assertEquals(1, logger.errors.size)
+        assertTrue(logger.errors[0].contains("Missing dependency"))
+        assertTrue(logger.errors[0].contains("primary"))
+    }
+
+    @Test
+    fun `a qualified provider does not make an unrelated unqualified request ambiguous`() {
+        // qualifier disambiguates independently of the unqualified bucket - a "primary" provider
+        // sitting alongside the default one doesn't confuse an unqualified request.
+        val logger = FakeKSPLogger()
+        val providers = listOf(
+            componentNode("com.app.PrimaryRepository", satisfies = listOf("com.app.Repository"), qualifier = "primary"),
+            componentNode("com.app.DefaultRepository", satisfies = listOf("com.app.Repository")),
+            componentNode("com.app.Consumer", requires = listOf("com.app.Repository")),
+        )
+
+        DependencyValidator(providers, logger).validate()
+
+        assertTrue("expected no errors but got: ${logger.errors}", logger.errors.isEmpty())
+    }
+
+    @Test
+    fun `two providers under the same non-empty qualifier are reported as duplicates, even unrequested`() {
+        // unlike the empty-qualifier case, an explicit qualifier collision is always an error -
+        // it's not "several implementations of an interface", it's two declarations fighting over
+        // the exact same name, which silently overwrite each other in the generated lookup map.
+        val logger = FakeKSPLogger()
+        val providers = listOf(
+            componentNode("com.app.PrimaryRepositoryA", satisfies = listOf("com.app.Repository"), qualifier = "primary"),
+            componentNode("com.app.PrimaryRepositoryB", satisfies = listOf("com.app.Repository"), qualifier = "primary"),
+        )
+
+        DependencyValidator(providers, logger).validate()
+
+        assertEquals(1, logger.errors.size)
+        assertTrue(logger.errors[0].contains("Duplicate provider"))
+        assertTrue(logger.errors[0].contains("com.app.Repository"))
+        assertTrue(logger.errors[0].contains("primary"))
+        assertTrue(logger.errors[0].contains("com.app.PrimaryRepositoryA"))
+        assertTrue(logger.errors[0].contains("com.app.PrimaryRepositoryB"))
+    }
+
+    @Test
+    fun `two providers sharing a common supertype under the empty qualifier are still not duplicates`() {
+        // regression guard: the new duplicate-provider check must stay scoped to non-empty
+        // qualifiers only, or it would reintroduce the exact bug the ambiguous-check regression
+        // tests above were written to prevent.
+        val logger = FakeKSPLogger()
+        val providers = listOf(
+            componentNode("com.app.MarkerImplA", satisfies = listOf("com.app.MarkerImplA", "com.app.SharedMarker")),
+            componentNode("com.app.MarkerImplB", satisfies = listOf("com.app.MarkerImplB", "com.app.SharedMarker")),
+        )
+
+        DependencyValidator(providers, logger).validate()
+
+        assertTrue("expected no errors but got: ${logger.errors}", logger.errors.isEmpty())
+    }
+
+    @Test
+    fun `two providers under the same requested qualifier are reported as duplicates, not ambiguous`() {
+        // the duplicate-provider check subsumes ambiguous-check for the qualified case: it already
+        // fires unconditionally, so validate() short-circuits before the (now redundant) ambiguous
+        // check would otherwise also report the same pair.
+        val logger = FakeKSPLogger()
+        val providers = listOf(
+            componentNode("com.app.PrimaryRepositoryA", satisfies = listOf("com.app.Repository"), qualifier = "primary"),
+            componentNode("com.app.PrimaryRepositoryB", satisfies = listOf("com.app.Repository"), qualifier = "primary"),
+            componentNode(
+                "com.app.Consumer",
+                requiresQualified = listOf(RequiredDependency("com.app.Repository", qualifier = "primary")),
+            ),
+        )
+
+        DependencyValidator(providers, logger).validate()
+
+        assertEquals(1, logger.errors.size)
+        assertTrue(logger.errors[0].contains("Duplicate provider"))
+        assertTrue(logger.errors[0].contains("primary"))
+        assertTrue(logger.errors[0].contains("com.app.PrimaryRepositoryA"))
+        assertTrue(logger.errors[0].contains("com.app.PrimaryRepositoryB"))
     }
 
     @Test

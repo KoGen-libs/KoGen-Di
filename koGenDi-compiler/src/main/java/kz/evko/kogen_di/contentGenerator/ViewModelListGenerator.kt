@@ -61,7 +61,13 @@ class ViewModelListGenerator(
                     body.add("%N -> %T(\n", viewModel.createComponentNames(), viewModelClass)
                     body.indent()
                     parameters.forEach { param ->
-                        body.addStatement("%N = inject(),", param.name?.asString().orEmpty())
+                        val paramName = param.name?.asString().orEmpty()
+                        val paramQualifier = param.findParamQualifier()
+                        if (paramQualifier.isEmpty()) {
+                            body.addStatement("%N = inject(),", paramName)
+                        } else {
+                            body.addStatement("%N = inject(qualifier = %S),", paramName, paramQualifier)
+                        }
                     }
                     body.unindent()
                     body.addStatement(")")

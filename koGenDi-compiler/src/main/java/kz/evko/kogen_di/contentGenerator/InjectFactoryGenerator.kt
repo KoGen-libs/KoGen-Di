@@ -86,7 +86,7 @@ class InjectFactoryGenerator(
                 "\tif (reference == %T::class.java) {\n" +
                 "\t\treturn this.applicationContext as %T\n" +
                 "\t}\n" +
-                "\treturn this.getComponent(%T::class.java) as %T\n" +
+                "\treturn this.getComponent(%T::class.java, qualifier) as %T\n" +
                 "}\n",
             reifiedT, koGenScopeClass, packageName, beansFactoryImplClass, componentsFactoryImplClass,
             contextClass, reifiedT, reifiedT, reifiedT,
@@ -97,13 +97,21 @@ class InjectFactoryGenerator(
                 |Resolves [T] from the DI graph - a `@KoGenComponent`/`@KoGenBean`-provided
                 |instance, or the registered application `Context` itself if [T] is `Context`.
                 |
-                |@throws kz.evko.kogen_di.exceptions.ComponentNotFoundException if nothing provides [T].
+                |@param qualifier Matches a `@KoGenComponent`/`@KoGenBean`'s own `qualifier`
+                |  argument - `""` (the default) requests the unqualified provider.
+                |@throws kz.evko.kogen_di.exceptions.ComponentNotFoundException if nothing provides [T]
+                |  under [qualifier].
                 |@throws kz.evko.kogen_di.exceptions.ContextNotFoundException if [T] is `Context` and
                 |  `setApplicationContext` hasn't been called yet.
                 """.trimMargin(),
             )
             .addModifiers(KModifier.INLINE)
             .addTypeVariable(reifiedT.copy(reified = true))
+            .addParameter(
+                ParameterSpec.builder("qualifier", String::class)
+                    .defaultValue("%S", "")
+                    .build()
+            )
             .returns(reifiedT)
             .addCode(body)
             .build()

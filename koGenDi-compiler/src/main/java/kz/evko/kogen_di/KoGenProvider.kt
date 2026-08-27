@@ -13,7 +13,10 @@ import com.google.devtools.ksp.validate
 import kz.evko.kogen_di.annotations.KoGenBean
 import kz.evko.kogen_di.annotations.KoGenComponent
 import kz.evko.kogen_di.annotations.KoGenViewModel
+import kz.evko.kogen_di.contentGenerator.findParamQualifier
+import kz.evko.kogen_di.contentGenerator.findQualifierParam
 import kz.evko.kogen_di.validation.ProviderNode
+import kz.evko.kogen_di.validation.RequiredDependency
 import kotlin.reflect.KClass
 
 /** KSP entry point (registered via `META-INF/services`) - builds one [KoGenProcessor] per compilation. */
@@ -129,10 +132,14 @@ internal class KoGenProcessor(
                     ProviderNode(
                         concreteType = concreteType,
                         requiredDependencies = primaryConstructor.parameters.map { param ->
-                            param.type.resolve().declaration.qualifiedName?.asString() ?: ""
+                            RequiredDependency(
+                                type = param.type.resolve().declaration.qualifiedName?.asString() ?: "",
+                                qualifier = param.findParamQualifier(),
+                            )
                         },
                         satisfiableTypes = allSatisfiableTypes,
                         sourceElement = classDeclaration,
+                        qualifier = classDeclaration.findQualifierParam(KoGenComponent::class),
                     )
                 )
             }
@@ -151,10 +158,14 @@ internal class KoGenProcessor(
                     ProviderNode(
                         concreteType = concreteType,
                         requiredDependencies = functionDeclaration.parameters.map { param ->
-                            param.type.resolve().declaration.qualifiedName?.asString() ?: ""
+                            RequiredDependency(
+                                type = param.type.resolve().declaration.qualifiedName?.asString() ?: "",
+                                qualifier = param.findParamQualifier(),
+                            )
                         },
                         satisfiableTypes = listOf(name.asString()),
                         sourceElement = functionDeclaration,
+                        qualifier = functionDeclaration.findQualifierParam(KoGenBean::class),
                     )
                 )
             }
@@ -176,7 +187,10 @@ internal class KoGenProcessor(
                     ProviderNode(
                         concreteType = concreteType,
                         requiredDependencies = primaryConstructor.parameters.map { param ->
-                            param.type.resolve().declaration.qualifiedName?.asString() ?: ""
+                            RequiredDependency(
+                                type = param.type.resolve().declaration.qualifiedName?.asString() ?: "",
+                                qualifier = param.findParamQualifier(),
+                            )
                         },
                         satisfiableTypes = allSatisfiableTypes,
                         sourceElement = classDeclaration,
