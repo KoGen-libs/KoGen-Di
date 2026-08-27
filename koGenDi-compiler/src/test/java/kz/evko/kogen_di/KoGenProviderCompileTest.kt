@@ -84,6 +84,17 @@ class KoGenProviderCompileTest {
         abstract class KoGenComponentsFactory {
             abstract fun createComponentsMap(): Map<KoGenKey, KoGenComponents>
         }
+
+        data class KoGenModuleId(
+            val scopeId: String,
+            val beansFactoryClass: Class<out KoGenBeansFactory>,
+            val componentsFactoryClass: Class<out KoGenComponentsFactory>,
+            val viewModelScopeClass: Class<out kz.evko.kogen_di.viewModel.KoGenViewModelScope>,
+        )
+
+        inline fun <reified T> KoGenModuleId.inject(qualifier: String = ""): T = Any() as T
+
+        fun KoGenModuleId.setApplicationContext(context: Any) = Unit
         """.trimIndent(),
     )
 
@@ -156,6 +167,36 @@ class KoGenProviderCompileTest {
         assertEquals(KotlinCompilation.ExitCode.OK, compiled.result.exitCode)
         val generated = compiled.generatedFile("KoGenComponentsImpl.kt")
         assertTrue(generated.contains("SimpleService"))
+    }
+
+    @Test
+    fun `KoGenInjectors only carries a per-module id, every entry point delegates to the koGenDi library`() {
+        // the actual inject()/setApplicationContext() logic now lives in the koGenDi runtime
+        // library (KoGenInjection.kt) - what's generated per module should shrink to just the id
+        // plus one-line delegates, not reimplement the logic itself.
+        val compiled = compile(
+            """
+            package com.test
+            import kz.evko.kogen_di.annotations.KoGenComponent
+
+            @KoGenComponent
+            class SimpleService
+            """.trimIndent()
+        )
+
+        assertEquals(KotlinCompilation.ExitCode.OK, compiled.result.exitCode)
+        val generated = compiled.generatedFile("KoGenInjectors.kt")
+        assertTrue(generated.contains("import kz.evko.kogen_di.injector.inject"))
+        assertTrue(generated.contains("import kz.evko.kogen_di.injector.setApplicationContext"))
+        assertTrue(generated.contains("internal val koGenModuleId"))
+        assertTrue(generated.contains("KoGenModuleId("))
+        assertTrue(generated.contains("beansFactoryClass = KoGenBeansFactoryImpl::class.java"))
+        assertTrue(generated.contains("componentsFactoryClass = KoGenComponentsFactoryImpl::class.java"))
+        assertTrue(generated.contains("viewModelScopeClass = KoGenViewModelScopeImpl::class.java"))
+        assertTrue(generated.contains("= koGenModuleId.inject(qualifier)"))
+        assertTrue(generated.contains("koGenModuleId.setApplicationContext(context)"))
+        // no ViewModel/Compose entry points without the KSP flags that opt into them
+        assertTrue(!generated.contains("fun koGenViewModel"))
     }
 
     @Test

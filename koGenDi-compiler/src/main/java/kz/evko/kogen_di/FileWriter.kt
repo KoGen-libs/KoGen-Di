@@ -7,7 +7,7 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSDeclaration
 import com.google.devtools.ksp.symbol.KSFile
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
-import com.squareup.kotlinpoet.ksp.writeTo
+import com.squareup.kotlinpoet.FileSpec
 import kz.evko.kogen_di.contentGenerator.BeansListGenerator
 import kz.evko.kogen_di.contentGenerator.ComponentListGenerator
 import kz.evko.kogen_di.contentGenerator.InjectFactoryGenerator
@@ -88,3 +88,64 @@ internal class FileWriter(
 /** The distinct source files these declarations came from - what a KSP `Dependencies` needs to track. */
 internal fun List<KSDeclaration>.toFileList(): List<KSFile> =
     mapNotNull { it.containingFile }
+
+// KotlinPoet's own parameter-list line-wrapping only forces one-parameter-per-line once a function
+// has more than two parameters (see kotlinpoet's ParameterSpec.kt, `List<ParameterSpec>.emit`,
+// `emitNewLines = size > 2 || forceNewLines` - not something exposed on FunSpec's public API). With
+// exactly one or two parameters (our `noinline extrasProducer`/`noinline ownerProducer` case) it
+// falls back to plain greedy word-wrap instead, which doesn't know a parameter modifier
+// (`noinline`/`crossinline`/`vararg`) must stay glued to the parameter name right after it, nor
+// where the parameter list actually ends - e.g. `Fragment.koGenViewModel(noinline\n
+// extrasProducer: ...): ReadOnlyProperty<Fragment, T> =` on one cramped line. This reformatting is
+// purely cosmetic (the code is syntactically identical either way) and safe: `noinline`/
+// `crossinline`/`vararg` are reserved parameter-modifier keywords that can only ever appear
+// directly after `(` or `, ` in valid Kotlin, so matching them there can't misfire on unrelated
+// generated text.
+private val orphanedParameterModifier = Regex("""\b(noinline|crossinline|vararg)\n\s*""")
+private val modifierParameterListStart = Regex("""\((noinline|crossinline|vararg) """)
+private val parameterListContinuesOnModifier = Regex(""", (noinline|crossinline|vararg) """)
+
+/** `internal` (rather than `private`) purely so [FileWriterFormattingTest] can exercise it directly on sample strings, without needing a full KSP compilation. */
+internal fun String.fixOrphanedParameterModifiers(): String {
+    // Reattach a modifier keyword orphaned at the end of a line to the parameter name after it.
+    val reattached = replace(orphanedParameterModifier) { "${it.groupValues[1]} " }
+
+    // Lay each parameter of a `noinline`/`crossinline`/`vararg` parameter list on its own line,
+    // with the closing `)` (and whatever follows it - the return type, ` =`, ...) on its own line
+    // too. This needs an actual paren-depth scan rather than another regex: a parameter's own type
+    // can itself contain parens (e.g. `(() -> CreationExtras)?`), so naively matching "the next
+    // `)`" would stop at the wrong one instead of the one that actually closes the parameter list.
+    val result = StringBuilder()
+    var cursor = 0
+    while (true) {
+        val match = modifierParameterListStart.find(reattached, cursor) ?: break
+        val openParen = match.range.first
+        result.append(reattached, cursor, openParen + 1)
+
+        var depth = 1
+        var scan = openParen + 1
+        while (scan < reattached.length && depth > 0) {
+            when (reattached[scan]) {
+                '(' -> depth++
+                ')' -> depth--
+            }
+            if (depth == 0) break
+            scan++
+        }
+        val closeParen = scan // index of the '(' that matches openParen, or reattached.length if unbalanced
+
+        val parameters = reattached.substring(openParen + 1, closeParen)
+            .replace(parameterListContinuesOnModifier) { ",\n    ${it.groupValues[1]} " }
+        result.append("\n    ").append(parameters).append("\n)")
+
+        cursor = closeParen + 1
+    }
+    result.append(reattached, cursor, reattached.length)
+    return result.toString()
+}
+
+/** Same as KotlinPoet's own `FileSpec.writeTo(codeGenerator, dependencies)`, plus [fixOrphanedParameterModifiers]. */
+internal fun FileSpec.writeTo(codeGenerator: CodeGenerator, dependencies: Dependencies) {
+    val file = codeGenerator.createNewFile(dependencies, packageName, name)
+    file.bufferedWriter(Charsets.UTF_8).use { it.write(toString().fixOrphanedParameterModifiers()) }
+}

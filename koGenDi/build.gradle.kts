@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.compose.compiler)
     id("maven-publish")
     id("signing")
 }
@@ -20,11 +21,20 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        // Deliberately lower than the other modules' JVM 17 (see koGenDi-common/koGenDi-compiler):
+        // this module now ships real `inline fun`s (inject()/koGenViewModel()/...) whose bytecode
+        // gets inlined directly into every consuming app's own compilation, and Kotlin refuses to
+        // inline bytecode built for a higher JVM target than the consumer's own - so this must stay
+        // at or below the lowest JVM target any consumer (e.g. the demo `app`, JVM 1.8) might use.
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = "1.8"
+    }
+
+    buildFeatures {
+        compose = true
     }
 
     publishing {
@@ -38,6 +48,21 @@ android {
 dependencies {
     api(project(":koGenDi-common"))
 
+    // compileOnly - the ViewModel/Compose/Fragment entry points are opt-in (the consuming
+    // module's own KSP flags decide whether they're even generated), so a plain-DI-only consumer
+    // must not be forced to pull in Compose/Fragment/lifecycle-viewmodel transitively.
+    compileOnly(libs.androidx.viewmodel.android)
+    compileOnly(platform(libs.androidx.compose.bom))
+    compileOnly(libs.androidx.compose.runtime)
+    compileOnly(libs.androidx.fragment.ktx)
+    compileOnly(libs.androidx.activity)
+
+    // compileOnly doesn't extend to the test source set on its own, and the Compose compiler
+    // plugin (buildFeatures.compose = true above) requires the runtime on the classpath for any
+    // Kotlin compile task in this module, tests included, even though no test here is itself
+    // @Composable.
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.runtime)
     testImplementation(libs.junit)
 }
 
