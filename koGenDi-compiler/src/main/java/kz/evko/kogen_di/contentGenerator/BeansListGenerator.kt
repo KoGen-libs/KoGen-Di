@@ -12,7 +12,6 @@ import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.MemberName
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
-import com.squareup.kotlinpoet.STAR
 import com.squareup.kotlinpoet.TypeSpec
 import kz.evko.kogen_di.annotations.KoGenBean
 
@@ -27,6 +26,7 @@ class BeansListGenerator(
 ) {
     private val koGenBeansInterface = ClassName("kz.evko.kogen_di.injector", "KoGenBeans")
     private val koGenBeansFactoryClass = ClassName("kz.evko.kogen_di.injector", "KoGenBeansFactory")
+    private val koGenKeyClass = ClassName("kz.evko.kogen_di.injector", "KoGenKey")
 
     /**
      * The `KoGenBeansImpl` enum implementing `KoGenBeans` - one entry per bean function, each
@@ -78,7 +78,13 @@ class BeansListGenerator(
                     body.add("%M(\n", functionMember)
                     body.indent()
                     bean.parameters.forEach { parameter ->
-                        body.addStatement("%N = inject(),", parameter.name?.asString().orEmpty())
+                        val paramName = parameter.name?.asString().orEmpty()
+                        val paramQualifier = parameter.findParamQualifier()
+                        if (paramQualifier.isEmpty()) {
+                            body.addStatement("%N = inject(),", paramName)
+                        } else {
+                            body.addStatement("%N = inject(qualifier = %S),", paramName, paramQualifier)
+                        }
                     }
                     body.unindent()
                     body.addStatement(")")
@@ -101,12 +107,11 @@ class BeansListGenerator(
             .build()
     }
 
-    /** The `KoGenBeansFactoryImpl` subclass of `KoGenBeansFactory` - maps each bean function's return type to its `KoGenBeansImpl` entry. */
+    /** The `KoGenBeansFactoryImpl` subclass of `KoGenBeansFactory` - maps each bean function's return type, paired with its `@KoGenBean(qualifier = ...)`, to its `KoGenBeansImpl` entry. */
     fun generateBeansFactory(beans: List<KSFunctionDeclaration>): FileSpec {
         val koGenBeansImplClass = ClassName(packageName, "KoGenBeansImpl")
-        val classOfStar = ClassName("java.lang", "Class").parameterizedBy(STAR)
         val mapType = ClassName("kotlin.collections", "Map")
-            .parameterizedBy(classOfStar, koGenBeansInterface)
+            .parameterizedBy(koGenKeyClass, koGenBeansInterface)
 
         val mapBody = CodeBlock.builder().add("mapOf(\n").indent()
         beans.forEach { bean ->
@@ -115,9 +120,12 @@ class BeansListGenerator(
                 returnDeclaration.packageName.asString(),
                 returnDeclaration.simpleName.asString(),
             )
+            val qualifier = bean.findQualifierParam(KoGenBean::class)
             mapBody.addStatement(
-                "%T::class.java to %T.%N,",
+                "%T(%T::class.java, %S) to %T.%N,",
+                koGenKeyClass,
                 returnTypeClassName,
+                qualifier,
                 koGenBeansImplClass,
                 returnDeclaration.createComponentNames(),
             )

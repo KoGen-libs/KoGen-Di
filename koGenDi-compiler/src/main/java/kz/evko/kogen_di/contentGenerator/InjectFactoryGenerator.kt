@@ -10,7 +10,6 @@ import com.squareup.kotlinpoet.MemberName
 import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
-import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.TypeVariableName
 
 /**
@@ -18,36 +17,39 @@ import com.squareup.kotlinpoet.TypeVariableName
  * consumer gets, plus (when the matching KSP option is on) a Compose `koGenViewModel()` and a
  * `Fragment`/`ComponentActivity` `koGenViewModel()` delegate property. Written once per KSP run,
  * regardless of whether anything is annotated - see [generateInjectors].
+ *
+ * Every entry point here is a one-line delegate to the real implementation living in the `koGenDi`
+ * runtime library (`kz.evko.kogen_di.injector`/`kz.evko.kogen_di.viewModel` - see
+ * `KoGenInjection.kt`/`KoGenViewModelInjection.kt` there). The only thing that's actually generated
+ * per module is [koGenModuleId] - this module's own generated `KoGenBeansFactoryImpl`/
+ * `KoGenComponentsFactoryImpl`/`KoGenViewModelScopeImpl` classes, which the library can't know
+ * about ahead of time - plus the tiny `inline`/`reified` wrappers needed to capture `T::class.java`
+ * at each call site (a `reified` type parameter can only ever be captured by an `inline` function
+ * *at* the call site, so this much can never be moved into the library itself).
  */
 class InjectFactoryGenerator(
     private val packageName: String,
 ) {
-    private val koGenScopeClass = ClassName("kz.evko.kogen_di.injector", "KoGenScope")
+    private val koGenModuleIdClass = ClassName("kz.evko.kogen_di.injector", "KoGenModuleId")
     private val contextClass = ClassName("android.content", "Context")
     private val beansFactoryImplClass = ClassName(packageName, "KoGenBeansFactoryImpl")
     private val componentsFactoryImplClass = ClassName(packageName, "KoGenComponentsFactoryImpl")
+    private val viewModelScopeImplClass = ClassName(packageName, "KoGenViewModelScopeImpl")
 
     private val viewModelClass = ClassName("androidx.lifecycle", "ViewModel")
-    private val koGenViewModelScopeClass = ClassName("kz.evko.kogen_di.viewModel", "KoGenViewModelScope")
-    private val viewModelScopeImplClass = ClassName(packageName, "KoGenViewModelScopeImpl")
-    private val viewModelFactoryClass = ClassName(packageName, "KoGenViewModelFactory")
-    private val viewModelProviderClass = ClassName("androidx.lifecycle", "ViewModelProvider")
     private val viewModelStoreOwnerClass = ClassName("androidx.lifecycle", "ViewModelStoreOwner")
     private val composableAnnotation = ClassName("androidx.compose.runtime", "Composable")
-    private val localViewModelStoreOwnerMember =
-        MemberName("androidx.lifecycle.viewmodel.compose", "LocalViewModelStoreOwner")
-    private val currentComposerMember = MemberName("androidx.compose.runtime", "currentComposer")
-    private val rememberMember = MemberName("androidx.compose.runtime", "remember")
-
     private val creationExtrasClass = ClassName("androidx.lifecycle.viewmodel", "CreationExtras")
     private val readOnlyPropertyClass = ClassName("kotlin.properties", "ReadOnlyProperty")
-    private val kPropertyClass = ClassName("kotlin.reflect", "KProperty")
-    private val lazyThreadSafetyModeClass = ClassName("kotlin", "LazyThreadSafetyMode")
     private val fragmentClass = ClassName("androidx.fragment.app", "Fragment")
     private val componentActivityClass = ClassName("androidx.activity", "ComponentActivity")
 
+    private val injectMember = MemberName("kz.evko.kogen_di.injector", "inject")
+    private val setApplicationContextMember = MemberName("kz.evko.kogen_di.injector", "setApplicationContext")
+    private val koGenViewModelMember = MemberName("kz.evko.kogen_di.viewModel", "koGenViewModel")
+
     /**
-     * @param includeViewModelInjector Adds the Compose `koGenViewModel()` and its backing `KoGenViewModelFactory`.
+     * @param includeViewModelInjector Adds the Compose `koGenViewModel()`.
      * @param includeFragmentInjector Adds the `Fragment`/`ComponentActivity` `koGenViewModel()` delegate property.
      */
     fun generateInjectors(
@@ -55,13 +57,12 @@ class InjectFactoryGenerator(
         includeFragmentInjector: Boolean,
     ): FileSpec {
         val fileBuilder = FileSpec.builder(packageName, "KoGenInjectors")
+            .addProperty(buildModuleIdProperty())
             .addFunction(buildInjectFun())
             .addFunction(buildSetApplicationContextFun())
 
         if (includeViewModelInjector) {
-            fileBuilder
-                .addFunction(buildComposeViewModelFun())
-                .addType(buildViewModelFactorySpec())
+            fileBuilder.addFunction(buildComposeViewModelFun())
         }
 
         if (includeFragmentInjector) {
@@ -73,52 +74,62 @@ class InjectFactoryGenerator(
         return fileBuilder.build()
     }
 
+    /**
+     * This module's own generated factory/scope classes, wrapped once as a `@PublishedApi
+     * internal` constant - every entry point below just forwards to the library's own extension
+     * function on it. `viewModelScopeClass` is always set (not gated on the two ViewModel KSP
+     * options): `KoGenViewModelScopeImpl` is generated whenever *any*
+     * `@KoGenComponent`/`@KoGenBean`/`@KoGenViewModel` exists in the module at all, regardless of
+     * whether ViewModel support is enabled for it.
+     */
+    private fun buildModuleIdProperty(): PropertySpec {
+        val initializer = CodeBlock.builder()
+            .add("%T(\n", koGenModuleIdClass)
+            .indent()
+            .addStatement("scopeId = %S,", packageName)
+            .addStatement("beansFactoryClass = %T::class.java,", beansFactoryImplClass)
+            .addStatement("componentsFactoryClass = %T::class.java,", componentsFactoryImplClass)
+            .addStatement("viewModelScopeClass = %T::class.java,", viewModelScopeImplClass)
+            .unindent()
+            .add(")")
+            .build()
+
+        return PropertySpec.builder("koGenModuleId", koGenModuleIdClass)
+            .addAnnotation(ClassName("kotlin", "PublishedApi"))
+            .addModifiers(KModifier.INTERNAL)
+            .initializer(initializer)
+            .build()
+    }
+
     private fun buildInjectFun(): FunSpec {
         val reifiedT = TypeVariableName("T")
-        val body = CodeBlock.of(
-            "val reference = %T::class.java\n" +
-                "\n" +
-                "%T.getScope(\n" +
-                "\tscopeId = %S,\n" +
-                "\tbeansFactoryClass = %T::class.java,\n" +
-                "\tcomponentsFactoryClass = %T::class.java,\n" +
-                ").run {\n" +
-                "\tif (reference == %T::class.java) {\n" +
-                "\t\treturn this.applicationContext as %T\n" +
-                "\t}\n" +
-                "\treturn this.getComponent(%T::class.java) as %T\n" +
-                "}\n",
-            reifiedT, koGenScopeClass, packageName, beansFactoryImplClass, componentsFactoryImplClass,
-            contextClass, reifiedT, reifiedT, reifiedT,
-        )
         return FunSpec.builder("inject")
             .addKdoc(
                 """
                 |Resolves [T] from the DI graph - a `@KoGenComponent`/`@KoGenBean`-provided
                 |instance, or the registered application `Context` itself if [T] is `Context`.
                 |
-                |@throws kz.evko.kogen_di.exceptions.ComponentNotFoundException if nothing provides [T].
+                |@param qualifier Matches a `@KoGenComponent`/`@KoGenBean`'s own `qualifier`
+                |  argument - `""` (the default) requests the unqualified provider.
+                |@throws kz.evko.kogen_di.exceptions.ComponentNotFoundException if nothing provides [T]
+                |  under [qualifier].
                 |@throws kz.evko.kogen_di.exceptions.ContextNotFoundException if [T] is `Context` and
                 |  `setApplicationContext` hasn't been called yet.
                 """.trimMargin(),
             )
             .addModifiers(KModifier.INLINE)
             .addTypeVariable(reifiedT.copy(reified = true))
+            .addParameter(
+                ParameterSpec.builder("qualifier", String::class)
+                    .defaultValue("%S", "")
+                    .build()
+            )
             .returns(reifiedT)
-            .addCode(body)
+            .addStatement("return koGenModuleId.%M(qualifier)", injectMember)
             .build()
     }
 
     private fun buildSetApplicationContextFun(): FunSpec {
-        val body = CodeBlock.of(
-            "%T.setApplicationContext(\n" +
-                "\tscopeId = %S,\n" +
-                "\tcontext = context,\n" +
-                "\tbeansFactoryClass = %T::class.java,\n" +
-                "\tcomponentsFactoryClass = %T::class.java,\n" +
-                ")\n",
-            koGenScopeClass, packageName, beansFactoryImplClass, componentsFactoryImplClass,
-        )
         return FunSpec.builder("setApplicationContext")
             .addKdoc(
                 """
@@ -128,42 +139,12 @@ class InjectFactoryGenerator(
                 """.trimMargin(),
             )
             .addParameter("context", contextClass)
-            .addCode(body)
+            .addStatement("koGenModuleId.%M(context)", setApplicationContextMember)
             .build()
     }
 
     private fun buildComposeViewModelFun(): FunSpec {
         val reifiedT = TypeVariableName("T", viewModelClass)
-        val body = CodeBlock.of(
-            "val viewModelStoreOwner: %T = checkNotNull(\n" +
-                "\t%M.current\n" +
-                ") {\n" +
-                "\t%S\n" +
-                "}\n" +
-                "\n" +
-                "return %M.run {\n" +
-                "\t%M {\n" +
-                "\t\tval scope = %T.getInstance(\n" +
-                "\t\t\tscopeId = %S,\n" +
-                "\t\t\treference = %T::class.java,\n" +
-                "\t\t)\n" +
-                "\t\t%T(\n" +
-                "\t\t\tstore = viewModelStoreOwner.viewModelStore,\n" +
-                "\t\t\tfactory = %T(scope),\n" +
-                "\t\t)[T::class.java]\n" +
-                "\t}\n" +
-                "}\n",
-            viewModelStoreOwnerClass,
-            localViewModelStoreOwnerMember,
-            "No ViewModelStoreOwner was provided",
-            currentComposerMember,
-            rememberMember,
-            koGenViewModelScopeClass,
-            packageName,
-            viewModelScopeImplClass,
-            viewModelProviderClass,
-            viewModelFactoryClass,
-        )
         return FunSpec.builder("koGenViewModel")
             .addKdoc(
                 """
@@ -178,44 +159,7 @@ class InjectFactoryGenerator(
             .addModifiers(KModifier.INLINE)
             .addTypeVariable(reifiedT.copy(reified = true))
             .returns(reifiedT)
-            .addCode(body)
-            .build()
-    }
-
-    private fun buildViewModelFactorySpec(): TypeSpec {
-        val factoryInterface = viewModelProviderClass.nestedClass("Factory")
-        val createTypeVar = TypeVariableName("T", viewModelClass)
-        val classOfT = ClassName("java.lang", "Class").parameterizedBy(createTypeVar)
-
-        val createFun = FunSpec.builder("create")
-            .addTypeVariable(createTypeVar)
-            .addModifiers(KModifier.OVERRIDE)
-            .addParameter("modelClass", classOfT)
-            .returns(createTypeVar)
-            .addStatement("return scope.getViewModel(modelClass) as %T", createTypeVar)
-            .build()
-
-        return TypeSpec.classBuilder("KoGenViewModelFactory")
-            .addKdoc(
-                """
-                |`ViewModelProvider.Factory` that resolves a requested ViewModel through [scope]'s
-                |DI graph instead of constructing it directly - what `koGenViewModel()` uses under
-                |the hood.
-                """.trimMargin(),
-            )
-            .addSuperinterface(factoryInterface)
-            .primaryConstructor(
-                FunSpec.constructorBuilder()
-                    .addParameter("scope", koGenViewModelScopeClass)
-                    .build()
-            )
-            .addProperty(
-                PropertySpec.builder("scope", koGenViewModelScopeClass)
-                    .addModifiers(KModifier.PRIVATE)
-                    .initializer("scope")
-                    .build()
-            )
-            .addFunction(createFun)
+            .addStatement("return koGenModuleId.%M()", koGenViewModelMember)
             .build()
     }
 
@@ -224,38 +168,6 @@ class InjectFactoryGenerator(
         val extrasProducerType = LambdaTypeName.get(returnType = creationExtrasClass).copy(nullable = true)
         val ownerProducerType = LambdaTypeName.get(returnType = viewModelStoreOwnerClass)
         val returnPropertyType = readOnlyPropertyClass.parameterizedBy(extensionClassName, reifiedT)
-
-        val body = CodeBlock.of(
-            "return lazy(%T.NONE) {\n" +
-                "\tval scope = %T.getInstance(\n" +
-                "\t\tscopeId = %S,\n" +
-                "\t\treference = %T::class.java,\n" +
-                "\t)\n" +
-                "\t%T(\n" +
-                "\t\towner = ownerProducer(),\n" +
-                "\t\tfactory = %T(scope),\n" +
-                "\t)[T::class.java]\n" +
-                "}.let { lazyViewModel ->\n" +
-                "\tobject : %T<%T, T> {\n" +
-                "\t\toverride fun getValue(\n" +
-                "\t\t\tthisRef: %T,\n" +
-                "\t\t\tproperty: %T<*>,\n" +
-                "\t\t): T {\n" +
-                "\t\t\treturn lazyViewModel.value\n" +
-                "\t\t}\n" +
-                "\t}\n" +
-                "}\n",
-            lazyThreadSafetyModeClass,
-            koGenViewModelScopeClass,
-            packageName,
-            viewModelScopeImplClass,
-            viewModelProviderClass,
-            viewModelFactoryClass,
-            readOnlyPropertyClass,
-            extensionClassName,
-            extensionClassName,
-            kPropertyClass,
-        )
 
         return FunSpec.builder("koGenViewModel")
             .addKdoc(
@@ -286,7 +198,10 @@ class InjectFactoryGenerator(
                     .build()
             )
             .returns(returnPropertyType)
-            .addCode(body)
+            .addStatement(
+                "return koGenModuleId.%M(this, extrasProducer, ownerProducer)",
+                koGenViewModelMember,
+            )
             .build()
     }
 }

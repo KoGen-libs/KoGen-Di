@@ -3,6 +3,7 @@ package kz.evko.kogen_di.contentGenerator
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSDeclaration
+import com.google.devtools.ksp.symbol.KSValueParameter
 import com.squareup.kotlinpoet.ANY
 import com.squareup.kotlinpoet.BOOLEAN
 import com.squareup.kotlinpoet.ClassName
@@ -12,7 +13,6 @@ import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
-import com.squareup.kotlinpoet.STAR
 import com.squareup.kotlinpoet.TypeSpec
 import kz.evko.kogen_di.annotations.KoGenComponent
 import kotlin.reflect.KClass
@@ -28,7 +28,7 @@ class ComponentListGenerator(
 ) {
     private val koGenComponentsInterface = ClassName("kz.evko.kogen_di.injector", "KoGenComponents")
     private val koGenComponentsFactoryClass = ClassName("kz.evko.kogen_di.injector", "KoGenComponentsFactory")
-    private val classOfStar = ClassName("java.lang", "Class").parameterizedBy(STAR)
+    private val koGenKeyClass = ClassName("kz.evko.kogen_di.injector", "KoGenKey")
 
     /**
      * The `KoGenComponentsImpl` enum implementing `KoGenComponents` - one entry per component
@@ -79,7 +79,13 @@ class ComponentListGenerator(
                     body.add("%N -> %T(\n", enumName, componentClass)
                     body.indent()
                     parameters.forEach { param ->
-                        body.addStatement("%N = inject(),", param.name?.asString().orEmpty())
+                        val paramName = param.name?.asString().orEmpty()
+                        val paramQualifier = param.findParamQualifier()
+                        if (paramQualifier.isEmpty()) {
+                            body.addStatement("%N = inject(),", paramName)
+                        } else {
+                            body.addStatement("%N = inject(qualifier = %S),", paramName, paramQualifier)
+                        }
                     }
                     body.unindent()
                     body.addStatement(")")
@@ -101,19 +107,22 @@ class ComponentListGenerator(
             .build()
     }
 
-    /** The `KoGenComponentsFactoryImpl` subclass of `KoGenComponentsFactory` - maps each component's own type and every [satisfiableClassNames] supertype to its `KoGenComponentsImpl` entry. */
+    /** The `KoGenComponentsFactoryImpl` subclass of `KoGenComponentsFactory` - maps each component's own type and every [satisfiableClassNames] supertype, paired with its `@KoGenComponent(qualifier = ...)`, to its `KoGenComponentsImpl` entry. */
     fun createComponentFactory(components: List<KSClassDeclaration>): FileSpec {
         val koGenComponentsImplClass = ClassName(packageName, "KoGenComponentsImpl")
         val mapType = ClassName("kotlin.collections", "Map")
-            .parameterizedBy(classOfStar, koGenComponentsInterface)
+            .parameterizedBy(koGenKeyClass, koGenComponentsInterface)
 
         val mapBody = CodeBlock.builder().add("mapOf(\n").indent()
         components.forEach { component ->
             val enumName = component.createComponentNames()
+            val qualifier = component.findQualifierParam(KoGenComponent::class)
             component.satisfiableClassNames().forEach { satisfiableClass ->
                 mapBody.addStatement(
-                    "%T::class.java to %T.%N,",
+                    "%T(%T::class.java, %S) to %T.%N,",
+                    koGenKeyClass,
                     satisfiableClass,
+                    qualifier,
                     koGenComponentsImplClass,
                     enumName,
                 )
@@ -171,6 +180,21 @@ internal fun KSDeclaration.findSingletonParam(annotationClass: KClass<*>): Boole
         this.annotations.firstOrNull { it.shortName.asString() == annotationClass.simpleName }
     val name = annotation?.arguments?.firstOrNull { it.name?.asString() == "singleton" }
     return name?.value == true
+}
+
+/** This declaration's `qualifier` argument for [annotationClass] (`@KoGenComponent`/`@KoGenBean`), or `""` if unset/absent. */
+internal fun KSDeclaration.findQualifierParam(annotationClass: KClass<*>): String {
+    val annotation =
+        this.annotations.firstOrNull { it.shortName.asString() == annotationClass.simpleName }
+    val qualifier = annotation?.arguments?.firstOrNull { it.name?.asString() == "qualifier" }
+    return qualifier?.value as? String ?: ""
+}
+
+/** This constructor/function parameter's `@KoGenQualifier("...")` argument, or `""` if the annotation isn't present. */
+internal fun KSValueParameter.findParamQualifier(): String {
+    val annotation = this.annotations.firstOrNull { it.shortName.asString() == "KoGenQualifier" }
+    val qualifier = annotation?.arguments?.firstOrNull { it.name?.asString() == "qualifier" }
+    return qualifier?.value as? String ?: ""
 }
 
 /** This declaration's fully-qualified name. */

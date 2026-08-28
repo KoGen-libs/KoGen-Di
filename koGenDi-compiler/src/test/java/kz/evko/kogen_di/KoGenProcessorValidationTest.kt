@@ -50,6 +50,7 @@ class KoGenProcessorValidationTest {
         `when`(function.qualifiedName).thenReturn(ksName)
         `when`(function.returnType).thenReturn(returnTypeReference)
         `when`(function.parameters).thenReturn(emptyList())
+        `when`(function.annotations).thenReturn(emptySequence())
         return function
     }
 
@@ -60,6 +61,7 @@ class KoGenProcessorValidationTest {
 
         val param = mock(KSValueParameter::class.java)
         `when`(param.type).thenReturn(requiredTypeReference)
+        `when`(param.annotations).thenReturn(emptySequence())
 
         val constructor = mock(KSFunctionDeclaration::class.java)
         `when`(constructor.parameters).thenReturn(listOf(param))
@@ -68,6 +70,7 @@ class KoGenProcessorValidationTest {
         `when`(component.qualifiedName).thenReturn(ksName)
         `when`(component.superTypes).thenReturn(emptySequence())
         `when`(component.primaryConstructor).thenReturn(constructor)
+        `when`(component.annotations).thenReturn(emptySequence())
 
         return component
     }
@@ -101,6 +104,7 @@ class KoGenProcessorValidationTest {
         val missingTypeReference = typeReference("com.app.MissingConfig")
         val param = mock(KSValueParameter::class.java)
         `when`(param.type).thenReturn(missingTypeReference)
+        `when`(param.annotations).thenReturn(emptySequence())
 
         val brokenBean = bean("com.app.provideApiService", "com.app.ApiService")
         `when`(brokenBean.parameters).thenReturn(listOf(param))

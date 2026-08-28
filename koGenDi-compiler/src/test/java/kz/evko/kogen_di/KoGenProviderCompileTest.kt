@@ -45,9 +45,11 @@ class KoGenProviderCompileTest {
         """
         package kz.evko.kogen_di.injector
 
+        data class KoGenKey(val type: Class<*>, val qualifier: String = "")
+
         class KoGenScope {
             val applicationContext: Any? = null
-            fun getComponent(reference: Class<*>): Any = Any()
+            fun getComponent(reference: Class<*>, qualifier: String = ""): Any = Any()
 
             companion object {
                 fun getScope(
@@ -71,7 +73,7 @@ class KoGenProviderCompileTest {
         }
 
         abstract class KoGenBeansFactory {
-            abstract fun createBeansList(): Map<Class<*>, KoGenBeans>
+            abstract fun createBeansList(): Map<KoGenKey, KoGenBeans>
         }
 
         interface KoGenComponents {
@@ -80,8 +82,19 @@ class KoGenProviderCompileTest {
         }
 
         abstract class KoGenComponentsFactory {
-            abstract fun createComponentsMap(): Map<Class<*>, KoGenComponents>
+            abstract fun createComponentsMap(): Map<KoGenKey, KoGenComponents>
         }
+
+        data class KoGenModuleId(
+            val scopeId: String,
+            val beansFactoryClass: Class<out KoGenBeansFactory>,
+            val componentsFactoryClass: Class<out KoGenComponentsFactory>,
+            val viewModelScopeClass: Class<out kz.evko.kogen_di.viewModel.KoGenViewModelScope>,
+        )
+
+        inline fun <reified T> KoGenModuleId.inject(qualifier: String = ""): T = Any() as T
+
+        fun KoGenModuleId.setApplicationContext(context: Any) = Unit
         """.trimIndent(),
     )
 
@@ -154,6 +167,36 @@ class KoGenProviderCompileTest {
         assertEquals(KotlinCompilation.ExitCode.OK, compiled.result.exitCode)
         val generated = compiled.generatedFile("KoGenComponentsImpl.kt")
         assertTrue(generated.contains("SimpleService"))
+    }
+
+    @Test
+    fun `KoGenInjectors only carries a per-module id, every entry point delegates to the koGenDi library`() {
+        // the actual inject()/setApplicationContext() logic now lives in the koGenDi runtime
+        // library (KoGenInjection.kt) - what's generated per module should shrink to just the id
+        // plus one-line delegates, not reimplement the logic itself.
+        val compiled = compile(
+            """
+            package com.test
+            import kz.evko.kogen_di.annotations.KoGenComponent
+
+            @KoGenComponent
+            class SimpleService
+            """.trimIndent()
+        )
+
+        assertEquals(KotlinCompilation.ExitCode.OK, compiled.result.exitCode)
+        val generated = compiled.generatedFile("KoGenInjectors.kt")
+        assertTrue(generated.contains("import kz.evko.kogen_di.injector.inject"))
+        assertTrue(generated.contains("import kz.evko.kogen_di.injector.setApplicationContext"))
+        assertTrue(generated.contains("internal val koGenModuleId"))
+        assertTrue(generated.contains("KoGenModuleId("))
+        assertTrue(generated.contains("beansFactoryClass = KoGenBeansFactoryImpl::class.java"))
+        assertTrue(generated.contains("componentsFactoryClass = KoGenComponentsFactoryImpl::class.java"))
+        assertTrue(generated.contains("viewModelScopeClass = KoGenViewModelScopeImpl::class.java"))
+        assertTrue(generated.contains("= koGenModuleId.inject(qualifier)"))
+        assertTrue(generated.contains("koGenModuleId.setApplicationContext(context)"))
+        // no ViewModel/Compose entry points without the KSP flags that opt into them
+        assertTrue(!generated.contains("fun koGenViewModel"))
     }
 
     @Test
@@ -286,6 +329,149 @@ class KoGenProviderCompileTest {
         assertTrue(factory.contains("ChildImpl::class.java"))
         assertTrue(factory.contains("Parent::class.java"))
         assertTrue(factory.contains("GrandParent::class.java"))
+    }
+
+    @Test
+    fun `two components of the same type under different qualifiers compile without an ambiguous-dependency error`() {
+        // regression guard: qualifier is meant to make otherwise-ambiguous same-type providers
+        // coexist, exactly like Koin's named qualifiers - neither should trip the ambiguous check
+        // as long as nothing requires that type unqualified.
+        val compiled = compile(
+            """
+            package com.test
+            import kz.evko.kogen_di.annotations.KoGenComponent
+
+            interface Repository
+            @KoGenComponent(qualifier = "primary")
+            class PrimaryRepository : Repository
+            @KoGenComponent(qualifier = "secondary")
+            class SecondaryRepository : Repository
+            """.trimIndent()
+        )
+
+        assertEquals(KotlinCompilation.ExitCode.OK, compiled.result.exitCode)
+        val factory = compiled.generatedFile("KoGenComponentsFactoryImpl.kt")
+        assertTrue(factory.contains("KoGenKey(Repository::class.java, \"primary\")"))
+        assertTrue(factory.contains("KoGenKey(Repository::class.java, \"secondary\")"))
+    }
+
+    @Test
+    fun `a qualified bean is invisible to an unqualified dependency, reported as missing`() {
+        // the only provider of ApiService is qualifier = "alt", so the unqualified constructor
+        // parameter below must still fail exactly like no provider existed at all.
+        val compiled = compile(
+            """
+            package com.test
+            import kz.evko.kogen_di.annotations.KoGenBean
+            import kz.evko.kogen_di.annotations.KoGenComponent
+
+            interface ApiService
+            class ApiServiceImpl : ApiService
+
+            @KoGenBean(qualifier = "alt")
+            fun provideApiService(): ApiService = ApiServiceImpl()
+
+            @KoGenComponent
+            class Repository(private val apiService: ApiService)
+            """.trimIndent()
+        )
+
+        assertEquals(KotlinCompilation.ExitCode.COMPILATION_ERROR, compiled.result.exitCode)
+        assertTrue(compiled.result.messages.contains("Missing dependency"))
+        assertTrue(compiled.result.messages.contains("com.test.ApiService"))
+    }
+
+    @Test
+    fun `a constructor parameter annotated with KoGenQualifier resolves the matching qualified provider`() {
+        val compiled = compile(
+            """
+            package com.test
+            import kz.evko.kogen_di.annotations.KoGenComponent
+            import kz.evko.kogen_di.annotations.KoGenQualifier
+
+            interface Repository
+            @KoGenComponent(qualifier = "primary")
+            class PrimaryRepository : Repository
+            @KoGenComponent(qualifier = "secondary")
+            class SecondaryRepository : Repository
+
+            @KoGenComponent
+            class SyncService(@KoGenQualifier("primary") private val repository: Repository)
+            """.trimIndent()
+        )
+
+        assertEquals(KotlinCompilation.ExitCode.OK, compiled.result.exitCode)
+        val components = compiled.generatedFile("KoGenComponentsImpl.kt")
+        assertTrue(components.contains("repository = inject(qualifier = \"primary\")"))
+    }
+
+    @Test
+    fun `a constructor parameter requesting a qualifier nobody provides fails compilation as missing`() {
+        val compiled = compile(
+            """
+            package com.test
+            import kz.evko.kogen_di.annotations.KoGenComponent
+            import kz.evko.kogen_di.annotations.KoGenQualifier
+
+            interface Repository
+            @KoGenComponent
+            class DefaultRepository : Repository
+
+            @KoGenComponent
+            class SyncService(@KoGenQualifier("primary") private val repository: Repository)
+            """.trimIndent()
+        )
+
+        assertEquals(KotlinCompilation.ExitCode.COMPILATION_ERROR, compiled.result.exitCode)
+        assertTrue(compiled.result.messages.contains("Missing dependency"))
+        assertTrue(compiled.result.messages.contains("com.test.Repository"))
+    }
+
+    @Test
+    fun `two providers under the same requested qualifier fail compilation as duplicates`() {
+        val compiled = compile(
+            """
+            package com.test
+            import kz.evko.kogen_di.annotations.KoGenComponent
+            import kz.evko.kogen_di.annotations.KoGenQualifier
+
+            interface Repository
+            @KoGenComponent(qualifier = "primary")
+            class RepositoryA : Repository
+            @KoGenComponent(qualifier = "primary")
+            class RepositoryB : Repository
+
+            @KoGenComponent
+            class SyncService(@KoGenQualifier("primary") private val repository: Repository)
+            """.trimIndent()
+        )
+
+        assertEquals(KotlinCompilation.ExitCode.COMPILATION_ERROR, compiled.result.exitCode)
+        assertTrue(compiled.result.messages.contains("Duplicate provider"))
+        assertTrue(compiled.result.messages.contains("com.test.Repository"))
+    }
+
+    @Test
+    fun `two providers under the same non-empty qualifier fail compilation even when unrequested`() {
+        // the duplicate-provider check is unconditional for a non-empty qualifier - unlike the
+        // empty-qualifier case (see the "sharing a common supertype" test above), it doesn't wait
+        // for something to actually request it.
+        val compiled = compile(
+            """
+            package com.test
+            import kz.evko.kogen_di.annotations.KoGenComponent
+
+            interface Repository
+            @KoGenComponent(qualifier = "primary")
+            class RepositoryA : Repository
+            @KoGenComponent(qualifier = "primary")
+            class RepositoryB : Repository
+            """.trimIndent()
+        )
+
+        assertEquals(KotlinCompilation.ExitCode.COMPILATION_ERROR, compiled.result.exitCode)
+        assertTrue(compiled.result.messages.contains("Duplicate provider"))
+        assertTrue(compiled.result.messages.contains("com.test.Repository"))
     }
 
     @Test

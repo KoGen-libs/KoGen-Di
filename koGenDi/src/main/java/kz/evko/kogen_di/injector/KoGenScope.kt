@@ -20,13 +20,14 @@ class KoGenScope(
         }
         private set
 
-    /** [reference]'s instance, from [beansFactory] if it provides it, [componentsFactory] otherwise. Throws [ComponentNotFoundException] if neither does. */
-    fun getComponent(reference: Class<*>): Any {
-        beansFactory.findBeanByType(reference)?.let {
+    /** [reference]/[qualifier]'s instance, from [beansFactory] if it provides it, [componentsFactory] otherwise. Throws [ComponentNotFoundException] if neither does. */
+    fun getComponent(reference: Class<*>, qualifier: String = ""): Any {
+        beansFactory.findBeanByType(reference, qualifier)?.let {
             return beansFactory.getBean(it)
         }
 
-        return componentsFactory.getComponent(reference) ?: throw ComponentNotFoundException(reference.name)
+        return componentsFactory.getComponent(reference, qualifier)
+            ?: throw ComponentNotFoundException(reference.name)
     }
 
     companion object {

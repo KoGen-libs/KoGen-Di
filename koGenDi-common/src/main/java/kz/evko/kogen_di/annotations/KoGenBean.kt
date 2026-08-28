@@ -14,4 +14,11 @@ package kz.evko.kogen_di.annotations
 annotation class KoGenBean(
     /** Whether the same instance is reused for every `inject()` call, or a fresh one is built each time. */
     val singleton: Boolean = false,
+    /**
+     * Opaque qualifier this bean is registered under - like Koin's named qualifiers, just a plain
+     * string. `""` (the default) means "no qualifier": requested via a plain `inject<T>()`. A
+     * non-empty qualifier is requested via `inject<T>(qualifier = "...")` and is invisible to
+     * `inject<T>()` without it.
+     */
+    val qualifier: String = "",
 )
